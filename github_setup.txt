@@ -1,0 +1,15 @@
+GitHub Setup Commands (run after creating repositories on github.com):
+
+Backend Repository (fantasy-rally-backend):
+cd "D:\GAME_PROJECT_ORGANIZED\ACTIVE_PROJECTS\Fantasy_Rally_Backend"
+git remote add origin https://github.com/YOUR_USERNAME/fantasy-rally-backend.git
+git branch -M main
+git push -u origin main
+
+Frontend Repository (wavetype-xyz-frontend):
+cd "D:\GAME_PROJECT_ORGANIZED\ACTIVE_PROJECTS\Wavetype_Website"
+git remote add origin https://github.com/YOUR_USERNAME/wavetype-xyz-frontend.git
+git branch -M main
+git push -u origin main
+
+Replace YOUR_USERNAME with your actual GitHub username.
