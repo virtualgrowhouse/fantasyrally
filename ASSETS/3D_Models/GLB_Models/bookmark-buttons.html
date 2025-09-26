@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmark Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .category {
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .category h2 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .bookmark-btn {
+            display: block;
+            padding: 15px 20px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bookmark-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            background: linear-gradient(45deg, #ff7675, #fd79a8);
+        }
+
+        .bookmark-btn.dev {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .bookmark-btn.dev:hover {
+            background: linear-gradient(45deg, #81ecec, #00cec9);
+        }
+
+        .bookmark-btn.social {
+            background: linear-gradient(45deg, #fd79a8, #e84393);
+        }
+
+        .bookmark-btn.social:hover {
+            background: linear-gradient(45deg, #fab1a0, #e17055);
+        }
+
+        .bookmark-btn.gaming {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+        }
+
+        .bookmark-btn.gaming:hover {
+            background: linear-gradient(45deg, #55efc4, #81ecec);
+        }
+
+        .bookmark-btn.tools {
+            background: linear-gradient(45deg, #fdcb6e, #e17055);
+        }
+
+        .bookmark-btn.tools:hover {
+            background: linear-gradient(45deg, #ffeaa7, #fab1a0);
+        }
+
+        .bookmark-btn.ai {
+            background: linear-gradient(45deg, #a29bfe, #6c5ce7);
+        }
+
+        .bookmark-btn.ai:hover {
+            background: linear-gradient(45deg, #fd79a8, #fdcb6e);
+        }
+
+        .bookmark-btn.hosting {
+            background: linear-gradient(45deg, #00cec9, #55efc4);
+        }
+
+        .bookmark-btn.hosting:hover {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 30px;
+            padding: 15px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box:focus {
+            outline: none;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .buttons-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Fantasy Rally Dashboard</h1>
+
+        <input type="text" class="search-box" placeholder="Search bookmarks..." id="searchBox">
+
+        <div class="category">
+            <h2>🌐 Hosting & Web Management</h2>
+            <div class="buttons-grid">
+                <a href="https://dash.infinityfree.com/accounts/if0_38768571/#google_vignette" class="bookmark-btn hosting">InfinityFree Dashboard</a>
+                <a href="https://cpanel.infinityfree.com/panel/indexpl.php?id=2a12e7a61aef04cffb911c009cdcb146d4d1161c" class="bookmark-btn hosting">cPanel</a>
+                <a href="https://dash.infinityfree.com/accounts/if0_38768571/ftpDetails" class="bookmark-btn hosting">FTP Details</a>
+                <a href="https://filemanager.ai/new/" class="bookmark-btn hosting">File Manager AI</a>
+                <a href="http://wavetype.xyz/" class="bookmark-btn hosting">Wavetype.xyz</a>
+                <a href="https://vg.great-site.net/?i=1" class="bookmark-btn hosting">VG Great Site</a>
+                <a href="https://eu.site.pro/v4.2/J6sOb/" class="bookmark-btn hosting">Site.pro Builder</a>
+                <a href="https://dashboard.easywp.com/" class="bookmark-btn hosting">EasyWP</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🤖 AI & Machine Learning</h2>
+            <div class="buttons-grid">
+                <a href="https://gemini.google.com/app/5f5c0ffbb33e1feb" class="bookmark-btn ai">Google Gemini</a>
+                <a href="https://claude.ai/artifacts" class="bookmark-btn ai">Claude</a>
+                <a href="https://grok.com/project/a8f70387-25ba-48bb-a9c2-b9ef77cad24d?tab=attachments&chat=b1b8ae96-1c72-45ad-b6c7-2f1452dbaa44" class="bookmark-btn ai">Grok Project</a>
+                <a href="https://huggingface.co/spaces" class="bookmark-btn ai">Hugging Face Spaces</a>
+                <a href="https://www.krea.ai/realtime" class="bookmark-btn ai">Krea AI Realtime</a>
+                <a href="https://app.leonardo.ai/canvas" class="bookmark-btn ai">Leonardo AI Canvas</a>
+                <a href="https://lumalabs.ai/genie?view=create" class="bookmark-btn ai">Luma AI Genie</a>
+                <a href="https://replicate.com/playground" class="bookmark-btn ai">Replicate Playground</a>
+                <a href="https://studio.nebius.com/playground?models=Qwen/Qwen3-235B-A22B" class="bookmark-btn ai">Nebius AI Studio</a>
+                <a href="https://lmarena.ai/c/724cb765-5444-4be3-9fd3-b3a71c7051cd?chat-modality=search" class="bookmark-btn ai">LMArena</a>
+                <a href="https://getimg.ai/image-editor" class="bookmark-btn ai">GetImg AI Editor</a>
+                <a href="https://prodia.com/" class="bookmark-btn ai">Prodia</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🎮 Gaming & Development</h2>
+            <div class="buttons-grid">
+                <a href="https://cloud.unity.com/home/organizations/2475794916559/projects/209e3cf2-824f-428f-8751-4956c342e38b/assets?assetId=684344995b040420759c5fb6:abca2dc4-3de1-461b-93ad-475ddde98e1c" class="bookmark-btn gaming">Unity Asset Manager</a>
+                <a href="https://www.reddit.com/r/gamedev/" class="bookmark-btn gaming">GameDev Reddit</a>
+                <a href="https://perchance.org/carspecsrandomizer#edit" class="bookmark-btn gaming">Car Specs Randomizer</a>
+                <a href="https://bolt.new/" class="bookmark-btn gaming">Bolt.new</a>
+                <a href="https://threejs.org/" class="bookmark-btn gaming">Three.js</a>
+                <a href="file:///D:/3D.CARS/index.html" class="bookmark-btn gaming">3D Cars Gallery (Local)</a>
+                <a href="file:///D:/GantasyGarage/index.html" class="bookmark-btn gaming">3D Car Model Viewer (Local)</a>
+                <a href="https://codepen.io/blacklead-studio/pen/xbwaqxE" class="bookmark-btn gaming">Card Beam Animation</a>
+                <a href="https://midnightclub.fandom.com/wiki/Midnight_Club_3:_DUB_Edition" class="bookmark-btn gaming">Midnight Club Wiki</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>💻 Development Tools</h2>
+            <div class="buttons-grid">
+                <a href="https://github.com/vgrowhouse111/fr.easy.dressup.html.project" class="bookmark-btn dev">GitHub Project</a>
+                <a href="https://codepen.io/vgrowhouse999/pen/gbavRPE" class="bookmark-btn dev">CodePen - Particle Teapot</a>
+                <a href="https://codepen.io/vgrowhouse999/pen/yyNegag" class="bookmark-btn dev">CodePen - 3D Weather Widget</a>
+                <a href="https://pathfinder.w3schools.com/course-player?skillId=75e13f34-a8d9-4e12-8fdf-47f4abaab487&chapterIndex=0&slideIndex=3" class="bookmark-btn dev">W3Schools Pathfinder</a>
+                <a href="https://vercel.com/rlpatenaudeiiis-projects/v0-modular-spheres-interface/deployments" class="bookmark-btn dev">Vercel Deployments</a>
+                <a href="https://www.figma.com/files/team/1411348460042226788/recents-and-sharing?fuid=1411348457855340675" class="bookmark-btn dev">Figma Home</a>
+                <a href="https://imgbb.com/" class="bookmark-btn dev">ImgBB Image Hosting</a>
+                <a href="https://cloudconvert.com/mkv-to-gif" class="bookmark-btn dev">CloudConvert</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>📧 Communication & Social</h2>
+            <div class="buttons-grid">
+                <a href="https://discord.com/channels/1381009267158683760/1381009268656046163" class="bookmark-btn social">Discord - Fantasy Rally</a>
+                <a href="https://discord.com/channels/@me" class="bookmark-btn social">Discord - Friends</a>
+                <a href="https://mail.google.com/mail/u/0/?tab=rm&ogbl#inbox" class="bookmark-btn social">Gmail - Virtual Growhouse</a>
+                <a href="https://mail.google.com/mail/u/2/#inbox/FMfcgzQbffbCWDFXtFKWDwRLgBSggPlb" class="bookmark-btn social">Gmail - Fantasy Rally</a>
+                <a href="https://mail.google.com/mail/u/1/#inbox" class="bookmark-btn social">Gmail - rlpatenaudeiii</a>
+                <a href="https://www.facebook.com/photo?fbid=4396003540676539&set=pcb.1227804305407447" class="bookmark-btn social">Facebook</a>
+                <a href="https://www.facebook.com/profile.php?id=61568809787890" class="bookmark-btn social">Facebook Profile</a>
+                <a href="https://www.messenger.com/t/267962829726290" class="bookmark-btn social">Messenger - Danielle Cooper</a>
+                <a href="https://www.instagram.com/accounts/edit/" class="bookmark-btn social">Instagram</a>
+                <a href="https://www.linkedin.com/jobs/" class="bookmark-btn social">LinkedIn Jobs</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🛠️ Utilities & Tools</h2>
+            <div class="buttons-grid">
+                <a href="https://www.dropbox.com/home" class="bookmark-btn tools">Dropbox</a>
+                <a href="https://one.google.com/u/1/storage?hl=en&utm_source=google-account&utm_medium=web&g1_landing_page=2" class="bookmark-btn tools">Google One Storage</a>
+                <a href="https://www.icloud.com/" class="bookmark-btn tools">iCloud</a>
+                <a href="https://drive.google.com/drive/u/0/search?q=.MP3" class="bookmark-btn tools">Google Drive</a>
+                <a href="https://you.dj/free-dj-software" class="bookmark-btn tools">YouDJ Online</a>
+                <a href="https://segment-anything.com/" class="bookmark-btn tools">Segment Anything</a>
+                <a href="https://wukko.me/" class="bookmark-btn tools">Wukko</a>
+                <a href="https://cobalt.tools/" class="bookmark-btn tools">Cobalt Tools</a>
+                <a href="https://www.one-tab.com/page/j3tIOOWsR4SWbRGbl0XKMQ" class="bookmark-btn tools">OneTab</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🎰 Entertainment & Games</h2>
+            <div class="buttons-grid">
+                <a href="https://stake.us/casino/games/keno" class="bookmark-btn gaming">Stake Keno</a>
+                <a href="https://lonestarcasino.com/#!p/store/29744" class="bookmark-btn gaming">LoneStar Casino</a>
+                <a href="https://crowncoinscasino.com/" class="bookmark-btn gaming">Crown Coins Casino</a>
+                <a href="https://www.hellomillions.com/games/slots/jokers-jewels-jackpot-play/sweepstake/play?category=&gameIndex=&skipOtpMandatoryAndClosed=true" class="bookmark-btn gaming">Hello Millions</a>
+                <a href="https://casinorankr.com/sweepstakes-casinos/?location=New+Jersey" class="bookmark-btn gaming">Casino Rankr</a>
+                <a href="https://fansly.com/home" class="bookmark-btn gaming">Fansly</a>
+                <a href="https://1337x.to/" class="bookmark-btn gaming">1337x Torrents</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>📊 Documents & Data</h2>
+            <div class="buttons-grid">
+                <a href="https://docs.google.com/spreadsheets/d/16774srtBvzk_fKt9BYfrRUxVUSvIh_T5Z0lBfVURdsM/edit?gid=1319969956#gid=1319969956" class="bookmark-btn tools">Fantasy Rally Spreadsheet</a>
+                <a href="https://docs.google.com/document/d/1PUtnRQpTwSkBNT2ueA4ei73wwNlN78iPCLg5_N3HNQI/edit?tab=t.0" class="bookmark-btn tools">Car Descriptions Doc</a>
+                <a href="https://docs.google.com/spreadsheets/d/1-USuxXz5N2dswXpmaUJnVud_xmy7hD7DMdPxJQ4pa_k/edit?gid=0#gid=0" class="bookmark-btn tools">Casino List</a>
+                <a href="https://privacy.apple.com/" class="bookmark-btn tools">Apple Privacy</a>
+                <a href="https://iforgot.apple.com/" class="bookmark-btn tools">Apple Account Recovery</a>
+                <a href="https://platform.claude.com/dashboard" class="bookmark-btn tools">Claude Console</a>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🔍 Search & Research</h2>
+            <div class="buttons-grid">
+                <a href="https://www.google.com/search?q=2.4+million+bytes&rlz=1C1ONGR_enUS1143US1143&oq=2.4+million+bytes&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCTExNDc4ajBqN6gCALACAA&sourceid=chrome&ie=UTF-8" class="bookmark-btn tools">Google Search - 2.4M Bytes</a>
+                <a href="https://www.google.com/search?q=phi+airport&rlz=1C1ONGR_enUS1143US1143&oq=phi+airport&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCDI0OTRqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8" class="bookmark-btn tools">Google Search - PHI Airport</a>
+                <a href="https://www.google.com/search?q=best+database+from+loval+to+web&rlz=1C1ONGR_enUS1143US1143&oq=best+database+from+loval+to+web&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCDQzNDNqMGo0qAIAsAIB&sourceid=chrome&ie=UTF-8" class="bookmark-btn tools">Google Search - Database</a>
+                <a href="https://en.wikipedia.org/wiki/Maurice_Wilkes" class="bookmark-btn tools">Wikipedia - Maurice Wilkes</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const searchBox = document.getElementById('searchBox');
+        const bookmarkButtons = document.querySelectorAll('.bookmark-btn');
+
+        searchBox.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+
+            bookmarkButtons.forEach(button => {
+                const buttonText = button.textContent.toLowerCase();
+                const buttonHref = button.href.toLowerCase();
+
+                if (buttonText.includes(searchTerm) || buttonHref.includes(searchTerm)) {
+                    button.style.display = 'block';
+                } else {
+                    button.style.display = 'none';
+                }
+            });
+
+            // Hide empty categories
+            document.querySelectorAll('.category').forEach(category => {
+                const visibleButtons = category.querySelectorAll('.bookmark-btn[style="display: block"], .bookmark-btn:not([style*="display: none"])');
+                if (visibleButtons.length === 0 && searchTerm !== '') {
+                    category.style.display = 'none';
+                } else {
+                    category.style.display = 'block';
+                }
+            });
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                searchBox.focus();
+            }
+
+            if (e.key === 'Escape') {
+                searchBox.value = '';
+                searchBox.dispatchEvent(new Event('input'));
+                searchBox.blur();
+            }
+        });
+
+        // Add click tracking
+        bookmarkButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                console.log(`Navigating to: ${this.href}`);
+            });
+        });
+    </script>
+</body>
+</html>

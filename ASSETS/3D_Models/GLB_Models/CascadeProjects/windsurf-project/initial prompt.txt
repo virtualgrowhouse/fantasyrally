@@ -1,0 +1,57 @@
+Of course. Here is the entire process in the briefest way possible.
+
+Automated 3D Thumbnail Generation (Quick Guide)
+Step 1: Create Your Folders
+
+Create a folder named Models on your C: drive (C:\Models).
+
+Put all your .glb car models inside this folder.
+
+Create an empty folder named Thumbnails on your C: drive (C:\Thumbnails).
+
+Step 2: Create the Python Script
+
+Open Notepad, paste the Python code from our previous chat inside.
+
+Edit these two lines to match your folders:
+
+models_directory = "C:/Models"
+
+output_directory = "C:/Thumbnails"
+
+Save the file as render_thumbnails.py on your Desktop.
+
+Step 3: Create the Batch File
+
+Open a new Notepad, paste the Batch file code from our previous chat inside.
+
+Edit these two lines with your correct paths:
+
+set BLENDER_PATH="C:\Program Files\Blender Foundation\Blender 4.1\blender.exe"
+
+set SCRIPT_PATH="C:\Users\YourUsername\Desktop\render_thumbnails.py"
+
+Save the file as run_render.bat on your Desktop (select "All Files" for "Save as type").
+
+
+
+Hello!
+
+Double-click the run_render.bat file.
+
+A command widow will open and automatically create a thumbnail for every model in your Models folder, saving them to the Thumbnails folder.
+ndow will open and automatically create a thumbnail for every model in your Models folder, saving them to the Thumbnails folder.
+
+
+
+
+
+
+
+
+
+
+
+
+Tools
+

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cars Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <header>
+        <h1>3D Cars Gallery</h1>
+        <nav>
+            <button id="galleryBtn" class="nav-btn active">Gallery</button>
+            <button id="viewerBtn" class="nav-btn">Individual Viewer</button>
+            <button id="worldBtn" class="nav-btn">Open World</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Gallery View -->
+        <section id="gallery" class="view active">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search car models...">
+                <button id="searchBtn">Search</button>
+            </div>
+            <div class="filter-controls">
+                <label>Sort by:
+                    <select id="sortSelect">
+                        <option value="name">Name</option>
+                        <option value="size">File Size</option>
+                        <option value="date">Date Modified</option>
+                    </select>
+                </label>
+            </div>
+            <div id="thumbnailGrid" class="thumbnail-grid">
+                <!-- Thumbnails will be dynamically generated here -->
+            </div>
+        </section>
+
+        <!-- Individual Viewer -->
+        <section id="viewer" class="view">
+            <div class="viewer-controls">
+                <select id="modelSelect">
+                    <option value="">Select a model...</option>
+                </select>
+                <button id="loadModelBtn">Load Model</button>
+                <button id="resetCameraBtn">Reset Camera</button>
+                <button id="wireframeBtn">Toggle Wireframe</button>
+            </div>
+            <div id="viewerContainer" class="viewer-container">
+                <!-- Three.js canvas will be inserted here -->
+            </div>
+            <div class="model-info">
+                <h3 id="modelName">No model loaded</h3>
+                <p id="modelDetails">Select a model to view details</p>
+            </div>
+        </section>
+
+        <!-- Open World View -->
+        <section id="world" class="view">
+            <div class="world-controls">
+                <button id="addRandomCarsBtn">Add Random Cars</button>
+                <button id="clearWorldBtn">Clear World</button>
+                <button id="togglePhysicsBtn">Toggle Physics</button>
+                <label>
+                    Cars to spawn:
+                    <input type="number" id="carCount" min="1" max="20" value="5">
+                </label>
+            </div>
+            <div id="worldContainer" class="world-container">
+                <!-- Three.js open world canvas will be inserted here -->
+            </div>
+            <div class="world-info">
+                <p>Use WASD to move, mouse to look around</p>
+                <p id="worldStats">Cars in world: 0</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 3D Cars Gallery - Powered by Three.js</p>
+    </footer>
+
+    <script src="fileManager.js"></script>
+    <script src="thumbnailGenerator.js"></script>
+    <script src="viewer.js"></script>
+    <script src="openWorld.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

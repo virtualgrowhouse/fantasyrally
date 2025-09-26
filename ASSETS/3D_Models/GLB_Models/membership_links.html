@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Membership Links</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            color: #fff;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            margin: 2rem 0 1rem 0;
+            color: #4a90e2;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .link-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .link-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .link-card h3 {
+            color: #ff6b6b;
+            margin-bottom: 0.5rem;
+            font-size: 1.2em;
+        }
+
+        .link-card p {
+            margin-bottom: 1rem;
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn:hover {
+            background: linear-gradient(45deg, #357abd, #2968a3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.5);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn.secondary:hover {
+            background: linear-gradient(45deg, #ee5a52, #dc4c45);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .back-link {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .note {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 2rem 0;
+            border-radius: 0 10px 10px 0;
+            text-align: left;
+        }
+
+        .note strong {
+            color: #ffc107;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .btn {
+                display: block;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Claude Code Membership</h1>
+        <p style="font-size: 1.1em; margin-bottom: 2rem;">Quick links to check your membership status and account details</p>
+
+        <h2>🔍 Check Your Membership Status</h2>
+
+        <div class="link-card">
+            <h3>📊 Claude Code in VS Code</h3>
+            <p>If you're using Claude Code extension in VS Code, check the extension panel for usage indicators and membership status in the status bar.</p>
+            <a href="vscode://vscode.extensions/anthropic.claude-dev" class="btn">Open VS Code Extension</a>
+        </div>
+
+        <div class="link-card">
+            <h3>🌐 Anthropic Console</h3>
+            <p>Access your main Anthropic account dashboard to view billing, usage limits, and subscription details.</p>
+            <a href="https://console.anthropic.com" class="btn" target="_blank" rel="noopener noreferrer">Open Console</a>
+        </div>
+
+        <div class="link-card">
+            <h3>💬 Claude Web Interface</h3>
+            <p>Check your Claude account through the main web interface for subscription and usage information.</p>
+            <a href="https://claude.ai" class="btn secondary" target="_blank" rel="noopener noreferrer">Open Claude.ai</a>
+        </div>
+
+        <div class="note">
+            <strong>Note:</strong> Your membership details, usage limits, and remaining time are managed through your Anthropic account. I don't have access to this information during our conversation.
+        </div>
+
+        <div class="back-link">
+            <a href="index.html" class="btn">← Back to 3D Cars Gallery</a>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.link-card');
+
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Add click analytics (optional)
+            const links = document.querySelectorAll('.btn');
+            links.forEach(link => {
+                link.addEventListener('click', function() {
+                    console.log('Link clicked:', this.href);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

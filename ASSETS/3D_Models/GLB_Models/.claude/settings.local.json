@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/virtu/OneDrive/Desktop/1758428281889/Desktop_Items_2025-09-17/cars.fantasyrally.game/**)",
+      "Bash(start index.html)",
+      "Read(//d//**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

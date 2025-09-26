@@ -1,0 +1,36 @@
+RACING HUB GAME - OVERVIEW
+============================
+
+GAME CONCEPT:
+This is a comprehensive racing game hub featuring a circular bubble-based user interface.
+The game centers around car customization, racing, social features, and progression systems.
+
+CURRENT MAIN MODULES:
+- Market: Car trading and purchasing system
+- Race: Various racing modes and competitions
+- Career: Single-player progression system
+- Events: Special events and community challenges
+- Options: Game settings and configuration
+- Tune: Vehicle customization and performance tuning
+- Garage: Car collection and visual customization
+- Social: Player interaction and community features
+
+VISUAL DESIGN:
+- Central hub displays current selected car
+- Bubble-based radial menu system
+- Dark blue theme with cyan accents
+- Animated rings and pulse effects
+- Hover interactions reveal sub-modules
+- Hierarchical navigation (main -> sub -> sub-sub bubbles)
+
+TECHNICAL FEATURES:
+- HTML5/CSS3/JavaScript implementation
+- Tailwind CSS for styling
+- Responsive bubble positioning system
+- State management for active modules
+- Background image support
+- Custom animations and transitions
+
+GAMEPLAY FOCUS:
+The game emphasizes car culture, customization, and competitive racing with
+strong social elements and progression systems.

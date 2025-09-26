@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Car - Speed Demon GT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        body { font-family: 'Orbitron', monospace; }
+        .car-timeline { background: linear-gradient(135deg, #0a1423 0%, #1a2332 100%); }
+        .timestamp { color: #00ffff; }
+        .owner-badge { background: linear-gradient(45deg, #ff6b35, #f7931e); }
+        .modification-badge { background: linear-gradient(45deg, #4facfe, #00f2fe); }
+        .race-badge { background: linear-gradient(45deg, #fa709a, #fee140); }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px #00ffff; }
+            50% { box-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff; }
+        }
+        .live-indicator { animation: pulse-glow 2s infinite; }
+    </style>
+</head>
+<body class="bg-[#0a1423] text-white min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-[#1a2332] border-b border-cyan-400/30 p-4">
+        <div class="flex items-center justify-between max-w-6xl mx-auto">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-cyan-400 hover:text-cyan-300">← Back to Hub</a>
+                <h1 class="text-2xl font-bold text-cyan-200">My Car Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-green-400 rounded-full live-indicator"></div>
+                <span class="text-sm text-green-400">LIVE</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Car Info Header -->
+    <section class="max-w-6xl mx-auto p-6">
+        <div class="bg-gradient-to-r from-[#1a2332] to-[#2a3442] rounded-xl p-6 mb-6 border border-cyan-400/20">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-black text-cyan-200">SPEED DEMON GT</h2>
+                    <p class="text-cyan-400">VIN: CAR_001_PLAYER_ALPHA</p>
+                    <p class="text-sm text-gray-400">Born: September 15, 2024 | Total Races: 47 | Victories: 23</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-yellow-400">$45,750</div>
+                    <div class="text-sm text-gray-400">Current Value</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Timeline -->
+    <section class="max-w-6xl mx-auto p-6">
+        <h3 class="text-xl font-bold text-cyan-200 mb-4 flex items-center gap-2">
+            🕒 Live Car History
+            <span class="text-sm text-gray-400">(Auto-updating every 30 seconds)</span>
+        </h3>
+
+        <div class="car-timeline rounded-xl p-6 space-y-4" id="timeline">
+            <!-- Timeline entries will be populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Current Stats -->
+    <section class="max-w-6xl mx-auto p-6">
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="bg-[#1a2332] rounded-xl p-6 border border-cyan-400/20">
+                <h4 class="text-cyan-400 font-bold mb-2">Performance</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between"><span>Top Speed:</span><span class="text-yellow-400">312 mph</span></div>
+                    <div class="flex justify-between"><span>0-60:</span><span class="text-yellow-400">2.1s</span></div>
+                    <div class="flex justify-between"><span>Horsepower:</span><span class="text-yellow-400">850 HP</span></div>
+                </div>
+            </div>
+
+            <div class="bg-[#1a2332] rounded-xl p-6 border border-cyan-400/20">
+                <h4 class="text-cyan-400 font-bold mb-2">Modifications</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between"><span>Engine:</span><span class="text-green-400">Stage 3 Turbo</span></div>
+                    <div class="flex justify-between"><span>Exhaust:</span><span class="text-green-400">Custom Titanium</span></div>
+                    <div class="flex justify-between"><span>Tires:</span><span class="text-green-400">Racing Slicks</span></div>
+                </div>
+            </div>
+
+            <div class="bg-[#1a2332] rounded-xl p-6 border border-cyan-400/20">
+                <h4 class="text-cyan-400 font-bold mb-2">Ownership</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between"><span>Current Owner:</span><span class="text-blue-400">PlayerAlpha</span></div>
+                    <div class="flex justify-between"><span>Previous Owners:</span><span class="text-gray-400">3</span></div>
+                    <div class="flex justify-between"><span>Days Owned:</span><span class="text-gray-400">42</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Sample car history data - in real game this would come from database
+        const carHistory = [
+            {
+                timestamp: "2024-09-26T05:30:00Z",
+                type: "race_win",
+                owner: "PlayerAlpha",
+                event: "Won 'Midnight Canyon Race' - 1st Place",
+                value_change: "+$1,250",
+                details: "Beat 12 competitors, new personal best lap time"
+            },
+            {
+                timestamp: "2024-09-26T04:45:00Z",
+                type: "modification",
+                owner: "PlayerAlpha",
+                event: "Installed Stage 3 Turbo Kit",
+                value_change: "+$2,800",
+                details: "Performance increase: +120 HP, +0.3s faster 0-60"
+            },
+            {
+                timestamp: "2024-09-26T03:20:00Z",
+                type: "race_loss",
+                owner: "PlayerAlpha",
+                event: "Lost 'Street Circuit GP' - 4th Place",
+                value_change: "-$200",
+                details: "Tire wear affected performance, scheduled maintenance needed"
+            },
+            {
+                timestamp: "2024-09-25T22:15:00Z",
+                type: "paint_job",
+                owner: "PlayerAlpha",
+                event: "Custom Paint Job Applied",
+                value_change: "+$500",
+                details: "Neon Green with Lightning Bolt decals"
+            },
+            {
+                timestamp: "2024-09-25T18:30:00Z",
+                type: "ownership_change",
+                owner: "PlayerBeta → PlayerAlpha",
+                event: "Car Sold at Auction",
+                value_change: "$42,500",
+                details: "Previous owner: PlayerBeta (owned 28 days)"
+            },
+            {
+                timestamp: "2024-09-20T14:00:00Z",
+                type: "creation",
+                owner: "System",
+                event: "Car Generated by AI",
+                value_change: "$35,000",
+                details: "Base model created with premium AI automotive art styling"
+            }
+        ];
+
+        let timelineIndex = 0;
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return "Just now";
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            return `${days}d ago`;
+        }
+
+        function getEventIcon(type) {
+            switch(type) {
+                case 'race_win': return '🏆';
+                case 'race_loss': return '🏁';
+                case 'modification': return '🔧';
+                case 'paint_job': return '🎨';
+                case 'ownership_change': return '👤';
+                case 'creation': return '✨';
+                default: return '📅';
+            }
+        }
+
+        function getBadgeClass(type) {
+            switch(type) {
+                case 'race_win': return 'race-badge';
+                case 'race_loss': return 'race-badge';
+                case 'modification': return 'modification-badge';
+                case 'paint_job': return 'modification-badge';
+                case 'ownership_change': return 'owner-badge';
+                case 'creation': return 'owner-badge';
+                default: return 'bg-gray-600';
+            }
+        }
+
+        function addTimelineEntry(entry) {
+            const timeline = document.getElementById('timeline');
+            const entryElement = document.createElement('div');
+            entryElement.className = 'flex items-start gap-4 p-4 bg-[#2a3442] rounded-lg border-l-4 border-cyan-400 opacity-0 transform translate-y-4 transition-all duration-500';
+
+            entryElement.innerHTML = `
+                <div class="text-2xl">${getEventIcon(entry.type)}</div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="timestamp font-mono text-sm">${formatTime(entry.timestamp)}</span>
+                        <span class="px-2 py-1 text-xs font-bold text-black rounded-full ${getBadgeClass(entry.type)}">${entry.type.toUpperCase().replace('_', ' ')}</span>
+                        <span class="text-sm text-gray-400">Owner: ${entry.owner}</span>
+                    </div>
+                    <div class="text-cyan-200 font-semibold">${entry.event}</div>
+                    <div class="text-gray-400 text-sm mt-1">${entry.details}</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-lg font-bold ${entry.value_change.includes('+') ? 'text-green-400' : entry.value_change.includes('-') ? 'text-red-400' : 'text-yellow-400'}">${entry.value_change}</div>
+                </div>
+            `;
+
+            timeline.insertBefore(entryElement, timeline.firstChild);
+
+            // Animate in
+            setTimeout(() => {
+                entryElement.style.opacity = '1';
+                entryElement.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        // Initialize timeline
+        function initTimeline() {
+            carHistory.forEach((entry, index) => {
+                setTimeout(() => {
+                    addTimelineEntry(entry);
+                }, index * 200);
+            });
+        }
+
+        // Simulate live updates
+        function simulateLiveUpdate() {
+            const liveEvents = [
+                {
+                    timestamp: new Date().toISOString(),
+                    type: "race_win",
+                    owner: "PlayerAlpha",
+                    event: "Won 'Highway Speedway' - 1st Place",
+                    value_change: "+$850",
+                    details: "Perfect racing line, no damage taken"
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    type: "modification",
+                    owner: "PlayerAlpha",
+                    event: "Nitrous System Upgraded",
+                    value_change: "+$1,200",
+                    details: "Dual-stage nitrous with 50% longer boost duration"
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    type: "paint_job",
+                    owner: "PlayerAlpha",
+                    event: "New Livery Design Applied",
+                    value_change: "+$300",
+                    details: "AI-generated flame pattern with holographic effects"
+                }
+            ];
+
+            const randomEvent = liveEvents[Math.floor(Math.random() * liveEvents.length)];
+            addTimelineEntry(randomEvent);
+        }
+
+        // Start the car history
+        initTimeline();
+
+        // Simulate live updates every 30 seconds
+        setInterval(simulateLiveUpdate, 30000);
+
+        // Update timestamps every minute
+        setInterval(() => {
+            document.querySelectorAll('.timestamp').forEach(el => {
+                // In real implementation, would update based on stored timestamp
+            });
+        }, 60000);
+    </script>
+</body>
+</html>
