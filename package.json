@@ -1,0 +1,24 @@
+{
+  "name": "fantasy-rally-hub",
+  "version": "1.0.0",
+  "description": "Fantasy Rally 3D Car Collection Racing Hub with AI Image Generator",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "racing",
+    "cars",
+    "3d",
+    "ai-generator",
+    "gaming",
+    "hub"
+  ],
+  "author": "Fantasy Rally Team",
+  "license": "MIT",
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  }
+}

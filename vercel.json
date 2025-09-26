@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "name": "fantasy-rally-hub",
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "functions": {
+    "index.html": {
+      "memory": 1024
+    }
+  }
+}

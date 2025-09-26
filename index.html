@@ -36,6 +36,39 @@
             100% { box-shadow: 0 0 5px rgba(255, 255, 0, 0.3), 0 0 10px rgba(255, 255, 0, 0.2); }
         }
         .click-glow { animation: click-glow 0.3s ease-out; }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes flash {
+          0% { background-color: rgba(255,255,255,0.8); box-shadow: 0 0 10px rgba(255,255,255,0.8); }
+          50% { background-color: rgba(255,255,255,0.3); box-shadow: 0 0 5px rgba(255,255,255,0.3); }
+          100% { background-color: rgba(255,255,255,0.8); box-shadow: 0 0 10px rgba(255,255,255,0.8); }
+        }
+        .bubble {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background-color: rgba(100,100,100,0.6);
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8px;
+          color: transparent;
+          user-select: none;
+        }
+        .bubble.active {
+          animation: flash 0.5s infinite;
+          background-color: rgba(255,255,255,0.8);
+          color: #000;
+        }
+        .bubble:hover {
+          transform: scale(1.2);
+          background-color: rgba(150,150,150,0.8);
+        }
     </style>
 </head>
 <body class="bg-[#0a1423] m-0 p-0 overflow-hidden">
@@ -44,8 +77,99 @@
         // --- STATE MANAGEMENT ---
         let activeBubbleId = null;
         let activeSubBubbleId = null;
+        let currentUser = null;
+        let authToken = localStorage.getItem('authToken');
         const currentCarImage = 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=800&auto=format&fit=crop';
         const backgroundImage = 'https://images.unsplash.com/photo-1614294103233-6c827c17b830?q=80&w=1200&auto=format&fit=crop';
+
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:3000/api';
+
+        // --- AUTHENTICATION FUNCTIONS ---
+        const authAPI = {
+            async register(userData) {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    return data;
+                } else {
+                    throw new Error(data.error || 'Registration failed');
+                }
+            },
+
+            async login(credentials) {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(credentials)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    return data;
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
+            },
+
+            async logout() {
+                if (authToken) {
+                    await fetch(`${API_BASE_URL}/auth/logout`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                }
+                authToken = null;
+                currentUser = null;
+                localStorage.removeItem('authToken');
+            },
+
+            async getProfile() {
+                const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    currentUser = data.user;
+                    return data.user;
+                } else {
+                    throw new Error(data.error || 'Failed to fetch profile');
+                }
+            },
+
+            isAuthenticated() {
+                return authToken !== null && currentUser !== null;
+            }
+        };
+
+        // Initialize authentication on page load
+        async function initializeAuth() {
+            if (authToken) {
+                try {
+                    await authAPI.getProfile();
+                } catch (error) {
+                    console.warn('Failed to verify token, logging out:', error);
+                    await authAPI.logout();
+                }
+            }
+        }
 
         // --- DATA ---
         const bubblesData = [
@@ -181,6 +305,28 @@
                     { id: 'workshop-livery', label: 'Livery Editor', icon: '🎨', angle: 120, distance: 90 },
                     { id: 'workshop-share', label: 'Share Designs', icon: '📤', angle: 240, distance: 90 }
                 ]
+            },
+            {
+                id: 'perchance',
+                label: 'Perchance',
+                icon: '🎲',
+                angle: 354,
+                distance: 200,
+                submodules: [
+                    { id: 'carspecsrandomizer', label: 'Car Specs', icon: '🎯', angle: 0, distance: 90, url: 'https://perchance.org/carspecsrandomizer' }
+                ]
+            },
+            {
+                id: 'ai-generator',
+                label: 'AI Gen',
+                icon: '🎨',
+                angle: 0,
+                distance: 200,
+                submodules: [
+                    { id: 'interior-design', label: 'Interior', icon: '🏠', angle: 0, distance: 90 },
+                    { id: 'architecture', label: 'Architecture', icon: '🏢', angle: 120, distance: 90 },
+                    { id: 'car-design', label: 'Car Design', icon: '🚗', angle: 240, distance: 90 }
+                ]
             }
         ];
 
@@ -294,17 +440,27 @@
 
             const profilePic = document.createElement('div');
             profilePic.className = "w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-cyan-400/50";
-            profilePic.innerHTML = '<span class="text-white text-xs font-bold">P</span>';
+
+            // Show user initial or login prompt
+            if (authAPI.isAuthenticated() && currentUser) {
+                const initial = currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : currentUser.username.charAt(0).toUpperCase();
+                profilePic.innerHTML = `<span class="text-white text-xs font-bold">${initial}</span>`;
+            } else {
+                profilePic.innerHTML = '<span class="text-white text-xs font-bold">?</span>';
+            }
 
             // Create dropdown menu
             const profileMenu = document.createElement('div');
             profileMenu.className = "absolute top-full right-0 mt-2 w-32 bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-lg shadow-lg shadow-cyan-400/20 opacity-0 pointer-events-none transition-all duration-300 z-50";
 
-            const menuItems = [
+            const menuItems = authAPI.isAuthenticated() ? [
                 { label: 'Home', icon: '🏠' },
                 { label: 'My Car', icon: '🏎️', url: 'my-car.html' },
-                { label: 'Garage', icon: '🚗' },
-                { label: 'World', icon: '🌍' }
+                { label: 'Profile', icon: '👤', action: 'showProfile' },
+                { label: 'Logout', icon: '🚪', action: 'logout' }
+            ] : [
+                { label: 'Login', icon: '🔑', action: 'login' },
+                { label: 'Register', icon: '📝', action: 'register' }
             ];
 
             menuItems.forEach((item, index) => {
@@ -315,15 +471,33 @@
 
                 menuItem.innerHTML = `<span>${item.icon}</span><span>${item.label}</span>`;
 
-                menuItem.addEventListener('click', () => {
-                    console.log(`Navigating to ${item.label}`);
+                menuItem.addEventListener('click', async () => {
+                    profileMenu.style.opacity = '0';
+                    profileMenu.style.pointerEvents = 'none';
+
                     if (item.url) {
                         window.location.href = item.url;
+                    } else if (item.action) {
+                        switch (item.action) {
+                            case 'login':
+                                showAuthModal('login');
+                                break;
+                            case 'register':
+                                showAuthModal('register');
+                                break;
+                            case 'logout':
+                                await authAPI.logout();
+                                renderApp();
+                                break;
+                            case 'showProfile':
+                                showUserProfile();
+                                break;
+                            default:
+                                console.log(`${item.label} functionality coming soon`);
+                        }
                     } else {
                         console.log(`${item.label} functionality coming soon`);
                     }
-                    profileMenu.style.opacity = '0';
-                    profileMenu.style.pointerEvents = 'none';
                 });
 
                 profileMenu.appendChild(menuItem);
@@ -339,7 +513,30 @@
 
             const friendsOnline = document.createElement('div');
             friendsOnline.className = "text-cyan-200 text-xs";
-            friendsOnline.innerHTML = '🟢 <span class="font-bold">23</span> friends online';
+
+            if (authAPI.isAuthenticated() && currentUser) {
+                friendsOnline.innerHTML = `💰 <span class="font-bold">${currentUser.credits}</span> credits | 🏆 Level ${currentUser.level}`;
+            } else {
+                friendsOnline.innerHTML = `
+                    <div class="flex gap-2 items-center">
+                        <button id="headerLoginBtn" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs px-3 py-1 rounded transition-all duration-200">Login</button>
+                        <button id="headerSignupBtn" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-all duration-200">Sign Up</button>
+                    </div>
+                `;
+
+                // Add event listeners for header auth buttons
+                setTimeout(() => {
+                    const headerLoginBtn = document.getElementById('headerLoginBtn');
+                    const headerSignupBtn = document.getElementById('headerSignupBtn');
+
+                    if (headerLoginBtn) {
+                        headerLoginBtn.addEventListener('click', () => showAuthModal('login'));
+                    }
+                    if (headerSignupBtn) {
+                        headerSignupBtn.addEventListener('click', () => showAuthModal('register'));
+                    }
+                }, 100);
+            }
 
             profileSection.appendChild(profileContainer);
             profileSection.appendChild(friendsOnline);
@@ -358,7 +555,135 @@
 
             mainContainer.appendChild(header);
 
+            // AI Image Generator Section
+            const aiGeneratorSection = document.createElement('div');
+            aiGeneratorSection.id = 'ai-generator-section';
+            aiGeneratorSection.style.display = 'none';
+            aiGeneratorSection.innerHTML = `
+                <div style="font-family:Arial,sans-serif; max-width:1200px; margin:0 auto; padding:20px; background:#1a1a1a; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+                  <!-- Header -->
+                  <header style="text-align:center; margin-bottom:40px;">
+                    <h1 style="color:#f0f0f0; font-size:2.8rem; margin-bottom:10px;">Ultimate AI Image Generator</h1>
+                    <p style="color:#b0b0b0; font-size:1.2rem;">Create stunning HD interior designs and architectural visualizations</p>
+                    <button id="backToHubBtn" style="background:#444; color:#f0f0f0; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; margin-top:15px;">← Back to Racing Hub</button>
+                  </header>
+
+                  <!-- Bubble Circle Section -->
+                  <section style="position:relative; width:100%; height:600px; margin-bottom:30px; background:#2d2d2d; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:300px; height:300px; border-radius:50%; overflow:hidden; box-shadow:0 0 30px rgba(0,0,0,0.5);">
+                      <img id="centeredImageEl" src="https://placehold.co/300x300" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div id="bubblesCtn" style="position:absolute; top:0; left:0; width:100%; height:100%;"></div>
+                    <button id="resetBubblesBtn" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#444; color:#f0f0f0; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; transition:all 0.3s;">Reset All Bubbles</button>
+                  </section>
+
+                  <!-- Interior Design Section -->
+                  <section style="background:#2d2d2d; padding:30px; border-radius:10px; margin-bottom:30px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <h2 style="color:#f0f0f0; font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center;">
+                      <span style="background:#3498db; color:white; padding:5px 12px; border-radius:20px; margin-right:10px;">01</span>
+                      Interior Design Generator
+                    </h2>
+
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:300px;">
+                        <textarea id="interiorPromptInput"
+                          placeholder="Describe your interior design: 'Modern minimalist living room with floor-to-ceiling windows, neutral color palette, and Scandinavian furniture'"
+                          style="width:100%; height:120px; padding:15px; border:2px solid #444; border-radius:8px; font-size:1rem; resize:vertical; background:#1a1a1a; color:#f0f0f0; transition:border-color 0.3s;"></textarea>
+
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                          <button id="interiorGenerateBtn"
+                            style="flex:1; background:#3498db; color:white; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 6px rgba(52, 152, 219, 0.3);">
+                            Generate HD Image
+                          </button>
+                          <button id="interiorRandomBtn"
+                            style="background:#444; color:#f0f0f0; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s;">
+                            Random Idea
+                          </button>
+                        </div>
+
+                        <div id="interiorLoadingEl" hidden style="margin-top:20px; text-align:center; color:#3498db;">
+                          <div style="display:inline-block; width:20px; height:20px; border:2px solid #3498db; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div>
+                          <span style="margin-left:10px;">Creating your masterpiece...</span>
+                        </div>
+                      </div>
+
+                      <div style="flex:1; min-width:300px; text-align:center;">
+                        <div id="interiorPlaceholderEl" style="background:#1a1a1a; border:2px dashed #444; border-radius:8px; height:300px; display:flex; align-items:center; justify-content:center; color:#b0b0b0;">
+                          Your generated interior design will appear here
+                        </div>
+                        <img id="interiorOutputImg" hidden style="max-width:100%; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                      </div>
+                    </div>
+                  </section>
+
+                  <!-- Architecture Section -->
+                  <section style="background:#2d2d2d; padding:30px; border-radius:10px; margin-bottom:30px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <h2 style="color:#f0f0f0; font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center;">
+                      <span style="background:#e74c3c; color:white; padding:5px 12px; border-radius:20px; margin-right:10px;">02</span>
+                      Architecture Generator
+                    </h2>
+
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:300px;">
+                        <textarea id="archPromptInput"
+                          placeholder="Describe your architectural concept: 'Futuristic sustainable skyscraper with vertical gardens, solar panels, and curved glass facade'"
+                          style="width:100%; height:120px; padding:15px; border:2px solid #444; border-radius:8px; font-size:1rem; resize:vertical; background:#1a1a1a; color:#f0f0f0; transition:border-color 0.3s;"></textarea>
+
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                          <button id="archGenerateBtn"
+                            style="flex:1; background:#e74c3c; color:white; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 6px rgba(231, 76, 60, 0.3);">
+                            Generate HD Image
+                          </button>
+                          <button id="archRandomBtn"
+                            style="background:#444; color:#f0f0f0; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s;">
+                            Random Idea
+                          </button>
+                        </div>
+
+                        <div id="archLoadingEl" hidden style="margin-top:20px; text-align:center; color:#e74c3c;">
+                          <div style="display:inline-block; width:20px; height:20px; border:2px solid #e74c3c; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div>
+                          <span style="margin-left:10px;">Designing your structure...</span>
+                        </div>
+                      </div>
+
+                      <div style="flex:1; min-width:300px; text-align:center;">
+                        <div id="archPlaceholderEl" style="background:#1a1a1a; border:2px dashed #444; border-radius:8px; height:300px; display:flex; align-items:center; justify-content:center; color:#b0b0b0;">
+                          Your architectural visualization will appear here
+                        </div>
+                        <img id="archOutputImg" hidden style="max-width:100%; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                      </div>
+                    </div>
+                  </section>
+
+                  <!-- Features Section -->
+                  <section style="background:#2d2d2d; color:#f0f0f0; padding:30px; border-radius:10px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <h2 style="font-size:1.8rem; margin-bottom:20px;">Why Choose Our AI Generator?</h2>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:20px; margin-top:30px;">
+                      <div style="padding:20px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        <h3 style="font-size:1.3rem; margin-bottom:10px;">HD Output</h3>
+                        <p>Generate high-resolution images perfect for presentations and print</p>
+                      </div>
+                      <div style="padding:20px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        <h3 style="font-size:1.3rem; margin-bottom:10px;">Specialized Models</h3>
+                        <p>Trained specifically for interior design and architectural visualization</p>
+                      </div>
+                      <div style="padding:20px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        <h3 style="font-size:1.3rem; margin-bottom:10px;">Fast Generation</h3>
+                        <p>Create stunning visuals in seconds, not hours</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <!-- Footer -->
+                  <footer style="text-align:center; margin-top:40px; color:#b0b0b0; font-size:0.9rem;">
+                    <p>© 2023 Ultimate AI Image Generator | All rights reserved</p>
+                  </footer>
+                </div>
+            `;
+            mainContainer.appendChild(aiGeneratorSection);
+
             const overlay = document.createElement('div');
+            overlay.id = 'racing-hub-overlay';
             overlay.className = "w-full h-full bg-[#0a1423]/80 backdrop-blur-sm flex items-center justify-center overflow-hidden pt-12";
             mainContainer.appendChild(overlay);
 
@@ -666,7 +991,227 @@
             return el;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // Authentication modal functions
+        function showAuthModal(mode = 'login') {
+            // Remove existing auth modal if any
+            const existingModal = document.getElementById('auth-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'auth-modal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-8 max-w-md w-full mx-4 relative';
+
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.className = 'absolute top-4 right-4 text-cyan-200 hover:text-white text-xl';
+            closeBtn.addEventListener('click', () => modal.remove());
+
+            // Title
+            const title = document.createElement('h2');
+            title.className = 'text-cyan-200 text-2xl font-bold text-center mb-6';
+            title.textContent = mode === 'login' ? 'Welcome Back' : 'Join Fantasy Rally';
+
+            // Form
+            const form = document.createElement('form');
+            form.className = 'space-y-4';
+
+            // Username field
+            const usernameField = document.createElement('div');
+            usernameField.innerHTML = `
+                <label class="block text-cyan-200 text-sm font-medium mb-2">Username${mode === 'login' ? ' or Email' : ''}</label>
+                <input type="text" id="username" name="username" required
+                       class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                       placeholder="${mode === 'login' ? 'Username or Email' : 'Choose a username'}">
+            `;
+
+            // Email field (only for register)
+            let emailField = null;
+            if (mode === 'register') {
+                emailField = document.createElement('div');
+                emailField.innerHTML = `
+                    <label class="block text-cyan-200 text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="email" name="email" required
+                           class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                           placeholder="your@email.com">
+                `;
+            }
+
+            // Display name field (only for register)
+            let displayNameField = null;
+            if (mode === 'register') {
+                displayNameField = document.createElement('div');
+                displayNameField.innerHTML = `
+                    <label class="block text-cyan-200 text-sm font-medium mb-2">Display Name (Optional)</label>
+                    <input type="text" id="displayName" name="displayName"
+                           class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                           placeholder="How others will see you">
+                `;
+            }
+
+            // Password field
+            const passwordField = document.createElement('div');
+            passwordField.innerHTML = `
+                <label class="block text-cyan-200 text-sm font-medium mb-2">Password</label>
+                <input type="password" id="password" name="password" required
+                       class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                       placeholder="Enter your password">
+            `;
+
+            // Error message
+            const errorMsg = document.createElement('div');
+            errorMsg.id = 'auth-error';
+            errorMsg.className = 'hidden bg-red-500/20 border border-red-500/30 text-red-200 p-3 rounded-lg text-sm';
+
+            // Submit button
+            const submitBtn = document.createElement('button');
+            submitBtn.type = 'submit';
+            submitBtn.className = 'w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02]';
+            submitBtn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+
+            // Toggle link
+            const toggleLink = document.createElement('p');
+            toggleLink.className = 'text-center text-gray-400 text-sm mt-4';
+            toggleLink.innerHTML = mode === 'login'
+                ? `Don't have an account? <a href="#" class="text-cyan-400 hover:text-cyan-300">Sign up</a>`
+                : `Already have an account? <a href="#" class="text-cyan-400 hover:text-cyan-300">Sign in</a>`;
+
+            // Toggle functionality
+            toggleLink.querySelector('a').addEventListener('click', (e) => {
+                e.preventDefault();
+                modal.remove();
+                showAuthModal(mode === 'login' ? 'register' : 'login');
+            });
+
+            // Form submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                submitBtn.disabled = true;
+                submitBtn.textContent = mode === 'login' ? 'Signing In...' : 'Creating Account...';
+
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+
+                try {
+                    if (mode === 'login') {
+                        await authAPI.login({ username: data.username, password: data.password });
+                    } else {
+                        await authAPI.register({
+                            username: data.username,
+                            email: data.email,
+                            password: data.password,
+                            displayName: data.displayName || data.username
+                        });
+                    }
+                    modal.remove();
+                    renderApp();
+                } catch (error) {
+                    errorMsg.textContent = error.message;
+                    errorMsg.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+                }
+            });
+
+            // Assemble form
+            form.appendChild(usernameField);
+            if (emailField) form.appendChild(emailField);
+            if (displayNameField) form.appendChild(displayNameField);
+            form.appendChild(passwordField);
+            form.appendChild(errorMsg);
+            form.appendChild(submitBtn);
+
+            modalContent.appendChild(closeBtn);
+            modalContent.appendChild(title);
+            modalContent.appendChild(form);
+            modalContent.appendChild(toggleLink);
+            modal.appendChild(modalContent);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        // User profile modal
+        function showUserProfile() {
+            if (!authAPI.isAuthenticated() || !currentUser) {
+                showAuthModal('login');
+                return;
+            }
+
+            // Remove existing profile modal if any
+            const existingModal = document.getElementById('profile-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'profile-modal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-8 max-w-lg w-full mx-4 relative';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.className = 'absolute top-4 right-4 text-cyan-200 hover:text-white text-xl';
+            closeBtn.addEventListener('click', () => modal.remove());
+
+            modalContent.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-white text-3xl font-bold">${currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : currentUser.username.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <h2 class="text-cyan-200 text-2xl font-bold">${currentUser.displayName || currentUser.username}</h2>
+                    <p class="text-gray-400">@${currentUser.username}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-cyan-400">${currentUser.credits}</div>
+                        <div class="text-sm text-gray-400">Credits</div>
+                    </div>
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-yellow-400">${currentUser.level}</div>
+                        <div class="text-sm text-gray-400">Level</div>
+                    </div>
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-green-400">${currentUser.carsOwned || 0}</div>
+                        <div class="text-sm text-gray-400">Cars</div>
+                    </div>
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-purple-400">${currentUser.achievementsUnlocked || 0}</div>
+                        <div class="text-sm text-gray-400">Achievements</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button class="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors" onclick="alert('Profile editing coming soon!')">
+                        Edit Profile
+                    </button>
+                    <button class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors" onclick="document.getElementById('profile-modal').remove(); authAPI.logout(); renderApp();">
+                        Logout
+                    </button>
+                </div>
+            `;
+
+            modalContent.insertBefore(closeBtn, modalContent.firstChild);
+            modal.appendChild(modalContent);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeAuth();
             renderApp();
 
             // Update time every second
@@ -873,6 +1418,9 @@
                 case 'workshop':
                     handleWorkshopFunction(subBubbleId);
                     break;
+                case 'ai-generator':
+                    handleAIGeneratorFunction(subBubbleId);
+                    break;
                 default:
                     console.log(`No handler for ${parentId}`);
             }
@@ -1038,6 +1586,30 @@
             }
         }
 
+        // AI Generator functions
+        function handleAIGeneratorFunction(subId) {
+            switch(subId) {
+                case 'interior-design':
+                case 'architecture':
+                case 'car-design':
+                    showAIGenerator();
+                    break;
+            }
+        }
+
+        // Show AI Generator interface
+        function showAIGenerator() {
+            document.getElementById('racing-hub-overlay').style.display = 'none';
+            document.getElementById('ai-generator-section').style.display = 'block';
+            initializeAIGenerator();
+        }
+
+        // Hide AI Generator and return to racing hub
+        function hideAIGenerator() {
+            document.getElementById('ai-generator-section').style.display = 'none';
+            document.getElementById('racing-hub-overlay').style.display = 'flex';
+        }
+
         // Sub-sub-bubble click handler function
         function handleSubSubBubbleClick(subSubBubbleId, subBubbleId, parentId) {
             console.log(`Clicked ${subSubBubbleId} in ${subBubbleId} of ${parentId}`);
@@ -1089,6 +1661,251 @@
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) modal.remove();
             });
+        }
+
+        // AI Generator initialization and functionality
+        function initializeAIGenerator() {
+            // Add event listeners for AI Generator interface
+            const backToHubBtn = document.getElementById('backToHubBtn');
+            if (backToHubBtn) {
+                backToHubBtn.addEventListener('click', hideAIGenerator);
+            }
+
+            // Initialize word bubbles and other AI Generator functionality
+            initializeBubbles();
+            setupAIGeneratorEvents();
+        }
+
+        // Generate 1200 words for bubbles
+        const words = [
+            "modern", "minimalist", "cozy", "bright", "spacious", "elegant", "luxury", "rustic", "industrial", "scandinavian",
+            "contemporary", "traditional", "vintage", "bohemian", "eclectic", "sleek", "warm", "cool", "natural", "artistic",
+            "open", "airy", "comfortable", "stylish", "sophisticated", "chic", "urban", "rural", "coastal", "mountain",
+            "tropical", "desert", "forest", "garden", "pool", "balcony", "terrace", "patio", "deck", "courtyard",
+            "kitchen", "bedroom", "bathroom", "living", "dining", "office", "library", "studio", "garage", "basement",
+            "light", "dark", "colorful", "monochrome", "pastel", "vibrant", "muted", "earthy", "metallic", "wooden",
+            "stone", "brick", "concrete", "glass", "marble", "granite", "tile", "carpet", "hardwood", "laminate",
+            "furniture", "sofa", "chair", "table", "desk", "bed", "cabinet", "shelf", "lamp", "mirror",
+            "art", "painting", "sculpture", "photography", "textile", "curtain", "rug", "pillow", "blanket", "plant",
+            "window", "door", "ceiling", "floor", "wall", "staircase", "fireplace", "chimney", "balcony", "terrace",
+            "sustainable", "eco-friendly", "green", "energy-efficient", "solar", "recycled", "organic", "natural", "healthy", "non-toxic"
+        ];
+
+        // Bubble management
+        let activeWords = new Set();
+        let audioContext = null;
+
+        // Initialize bubbles
+        function initializeBubbles() {
+            const container = document.getElementById('bubblesCtn');
+            if (!container) return;
+
+            container.innerHTML = ''; // Clear existing bubbles
+            const centerX = container.offsetWidth / 2;
+            const centerY = container.offsetHeight / 2;
+            const maxRadius = Math.min(centerX, centerY) - 30;
+            const rings = 10;
+            const bubblesPerRing = Math.ceil(words.length / rings);
+
+            // Create bubbles
+            for (let i = 0; i < words.length; i++) {
+                const ring = Math.floor(i / bubblesPerRing);
+                const posInRing = i % bubblesPerRing;
+                const radius = (ring + 1) * (maxRadius / rings);
+                const angle = (posInRing / bubblesPerRing) * Math.PI * 2;
+
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.style.left = `${x - 10}px`;
+                bubble.style.top = `${y - 10}px`;
+                bubble.dataset.word = words[i];
+                bubble.title = words[i];
+
+                bubble.onclick = function() {
+                    toggleBubble(bubble);
+                };
+
+                container.appendChild(bubble);
+            }
+        }
+
+        // Toggle bubble state
+        function toggleBubble(bubble) {
+            const word = bubble.dataset.word;
+
+            if (bubble.classList.contains('active')) {
+                bubble.classList.remove('active');
+                activeWords.delete(word);
+            } else {
+                bubble.classList.add('active');
+                activeWords.add(word);
+            }
+
+            playBubbleSound();
+            updatePrompts();
+        }
+
+        // Play bubble sound
+        function playBubbleSound() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Update text prompts with active words
+        function updatePrompts() {
+            const wordsArray = Array.from(activeWords);
+            const wordsText = wordsArray.length > 0 ? ', ' + wordsArray.join(', ') : '';
+
+            // Update interior prompt
+            const interiorInput = document.getElementById('interiorPromptInput');
+            if (interiorInput) {
+                const interiorValue = interiorInput.value;
+                const interiorBase = interiorValue.split(', ')[0];
+                interiorInput.value = interiorBase + wordsText;
+            }
+
+            // Update architecture prompt
+            const archInput = document.getElementById('archPromptInput');
+            if (archInput) {
+                const archValue = archInput.value;
+                const archBase = archValue.split(', ')[0];
+                archInput.value = archBase + wordsText;
+            }
+        }
+
+        // Setup AI Generator event listeners
+        function setupAIGeneratorEvents() {
+            // Reset bubbles button
+            const resetBtn = document.getElementById('resetBubblesBtn');
+            if (resetBtn) {
+                resetBtn.onclick = function() {
+                    const bubbles = document.querySelectorAll('.bubble');
+                    bubbles.forEach(bubble => {
+                        bubble.classList.remove('active');
+                    });
+                    activeWords.clear();
+                    updatePrompts();
+                };
+            }
+
+            // Interior Design Generator
+            const interiorGenerateBtn = document.getElementById('interiorGenerateBtn');
+            if (interiorGenerateBtn) {
+                interiorGenerateBtn.onclick = async function() {
+                    const interiorPromptInput = document.getElementById('interiorPromptInput');
+                    if (!interiorPromptInput.value.trim()) return;
+
+                    interiorGenerateBtn.disabled = true;
+                    const interiorLoadingEl = document.getElementById('interiorLoadingEl');
+                    const interiorOutputImg = document.getElementById('interiorOutputImg');
+                    const interiorPlaceholderEl = document.getElementById('interiorPlaceholderEl');
+
+                    interiorLoadingEl.hidden = false;
+                    interiorOutputImg.hidden = true;
+                    interiorPlaceholderEl.hidden = true;
+
+                    try {
+                        // Simulate image generation (replace with actual AI service)
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const placeholderUrl = `https://picsum.photos/600/400?random=${Math.random()}`;
+                        interiorOutputImg.src = placeholderUrl;
+                        interiorOutputImg.hidden = false;
+                    } catch (error) {
+                        interiorPlaceholderEl.hidden = false;
+                        interiorPlaceholderEl.textContent = "Generation failed. Please try again.";
+                    } finally {
+                        interiorLoadingEl.hidden = true;
+                        interiorGenerateBtn.disabled = false;
+                    }
+                };
+            }
+
+            // Architecture Generator
+            const archGenerateBtn = document.getElementById('archGenerateBtn');
+            if (archGenerateBtn) {
+                archGenerateBtn.onclick = async function() {
+                    const archPromptInput = document.getElementById('archPromptInput');
+                    if (!archPromptInput.value.trim()) return;
+
+                    archGenerateBtn.disabled = true;
+                    const archLoadingEl = document.getElementById('archLoadingEl');
+                    const archOutputImg = document.getElementById('archOutputImg');
+                    const archPlaceholderEl = document.getElementById('archPlaceholderEl');
+
+                    archLoadingEl.hidden = false;
+                    archOutputImg.hidden = true;
+                    archPlaceholderEl.hidden = true;
+
+                    try {
+                        // Simulate image generation (replace with actual AI service)
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const placeholderUrl = `https://picsum.photos/600/400?random=${Math.random()}`;
+                        archOutputImg.src = placeholderUrl;
+                        archOutputImg.hidden = false;
+                    } catch (error) {
+                        archPlaceholderEl.hidden = false;
+                        archPlaceholderEl.textContent = "Generation failed. Please try again.";
+                    } finally {
+                        archLoadingEl.hidden = true;
+                        archGenerateBtn.disabled = false;
+                    }
+                };
+            }
+
+            // Random Idea Generators
+            const interiorRandomBtn = document.getElementById('interiorRandomBtn');
+            if (interiorRandomBtn) {
+                interiorRandomBtn.onclick = function() {
+                    const ideas = [
+                        "Luxury penthouse living room with panoramic city views, marble floors, and contemporary art",
+                        "Cozy rustic cabin interior with stone fireplace, wooden beams, and fur rugs",
+                        "Industrial loft kitchen with exposed brick, stainless steel appliances, and concrete countertops",
+                        "Minimalist Japanese bedroom with tatami mats, shoji screens, and zen garden view",
+                        "Art deco hotel lobby with geometric patterns, brass fixtures, and velvet furnishings"
+                    ];
+                    const interiorPromptInput = document.getElementById('interiorPromptInput');
+                    if (interiorPromptInput) {
+                        interiorPromptInput.value = ideas[Math.floor(Math.random() * ideas.length)];
+                    }
+                };
+            }
+
+            const archRandomBtn = document.getElementById('archRandomBtn');
+            if (archRandomBtn) {
+                archRandomBtn.onclick = function() {
+                    const ideas = [
+                        "Sustainable eco-village with green roofs, solar panels, and communal spaces",
+                        "Futuristic floating city with interconnected platforms and vertical gardens",
+                        "Modern museum with cantilevered structure, glass facades, and interactive exhibits",
+                        "Desert research facility with sand-colored walls, solar shading, and water conservation systems",
+                        "Mountain retreat with cantilevered decks, natural materials, and panoramic windows"
+                    ];
+                    const archPromptInput = document.getElementById('archPromptInput');
+                    if (archPromptInput) {
+                        archPromptInput.value = ideas[Math.floor(Math.random() * ideas.length)];
+                    }
+                };
+            }
         }
     </script>
 </body>
