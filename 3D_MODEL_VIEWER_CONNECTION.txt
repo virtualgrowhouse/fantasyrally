@@ -1,0 +1,34 @@
+3D MODEL VIEWER CONNECTION DOCUMENTATION
+========================================
+
+Purpose: Connection between garage sub bubble and 3D model viewer with access to GLB files
+
+Implementation Details:
+- The garage sub bubble "3D Viewer" (id: '3d-viewer') is connected to open3DViewer() function
+- Located in index.html:474 (handleGarageFunction switch case)
+- Provides access to 89 GLB model files from ./ASSETS/3D_Models/GLB_Models/
+
+Features Added:
+1. Model Counter: Shows "X of 89 models" for navigation awareness
+2. Dropdown Selector: Quick access dropdown to jump to any specific model
+3. Enhanced Navigation: Previous/Next buttons with improved model tracking
+4. Organized Model Categories:
+   - Featured/Named Models (Fantasy Rally, High Octane Drag Racer, etc.)
+   - Base Models (0.glb through 0 (36).glb)
+   - Standard Models (model.glb through model (5).glb)
+   - Sample Models (sample.glb through sample (5).glb)
+   - Numbered Models (Spanish numbered models)
+   - Detail Generated Models
+   - UUID Models
+   - Temporary Models
+
+Model Array Location: index.html:387-480
+Total Models Available: 89 GLB files
+
+User Experience:
+- Click garage bubble → Click 3D Viewer sub bubble → Access all 89 models
+- Use dropdown for quick model selection
+- Use arrow buttons for sequential browsing
+- Real-time model counter shows current position
+
+This ensures users have full access to the complete 3D model library through the garage interface.

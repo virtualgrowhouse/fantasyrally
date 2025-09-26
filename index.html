@@ -383,28 +383,100 @@
 
         let currentMessageIndex = 0;
 
-        // 3D Models List - Using the GLB models from your project
+        // 3D Models List - All GLB models from your project (89 models total)
         const carModels = [
+            // Featured/Named Models
             { name: 'Fantasy Rally', path: './ASSETS/3D_Models/GLB_Models/Fantasy_Rally_Showdow_0714171004_texture.glb' },
             { name: 'High Octane Drag Racer', path: './ASSETS/3D_Models/GLB_Models/High_Octane_Drag_Rac_0204054716_texture.glb' },
             { name: 'Orange Racer', path: './ASSETS/3D_Models/GLB_Models/Orange_Racer_on_the_R_0714171017_texture.glb' },
             { name: 'Racecar Stanced', path: './ASSETS/3D_Models/GLB_Models/Racecar_stanced_car__0204061642_texture.glb' },
             { name: 'Red Elegance', path: './ASSETS/3D_Models/GLB_Models/Red_Elegance_on_the_B_0603082717_texture.glb' },
             { name: 'Speed Aesthetic', path: './ASSETS/3D_Models/GLB_Models/Speed_Aesthetic_0714170948_texture.glb' },
+            { name: 'Modern Serenity', path: './ASSETS/3D_Models/GLB_Models/Modern_Serenity_0714171027_texture.glb' },
+            { name: '4 Bedroom Luxury', path: './ASSETS/3D_Models/GLB_Models/4_bedroom_3bath_luxur_0714181403_texture.glb' },
+            { name: 'White Mesh', path: './ASSETS/3D_Models/GLB_Models/white_mesh.glb' },
+            { name: 'Object Model', path: './ASSETS/3D_Models/GLB_Models/object.glb' },
+            { name: 'Partpacker', path: './ASSETS/3D_Models/GLB_Models/partpacker_20250617_225653.glb' },
+
+            // Base Models
+            { name: 'Base Model', path: './ASSETS/3D_Models/GLB_Models/0.glb' },
+            { name: 'Base Model 1', path: './ASSETS/3D_Models/GLB_Models/0 (1).glb' },
+            { name: 'Base Model 2', path: './ASSETS/3D_Models/GLB_Models/0 (2).glb' },
+            { name: 'Base Model 3', path: './ASSETS/3D_Models/GLB_Models/0 (3).glb' },
+            { name: 'Base Model 4', path: './ASSETS/3D_Models/GLB_Models/0 (4).glb' },
+            { name: 'Base Model 5', path: './ASSETS/3D_Models/GLB_Models/0 (5).glb' },
+            { name: 'Base Model 6', path: './ASSETS/3D_Models/GLB_Models/0 (6).glb' },
+            { name: 'Base Model 7', path: './ASSETS/3D_Models/GLB_Models/0 (7).glb' },
+            { name: 'Base Model 8', path: './ASSETS/3D_Models/GLB_Models/0 (8).glb' },
+            { name: 'Base Model 9', path: './ASSETS/3D_Models/GLB_Models/0 (9).glb' },
+            { name: 'Base Model 10', path: './ASSETS/3D_Models/GLB_Models/0 (10).glb' },
+            { name: 'Base Model 11', path: './ASSETS/3D_Models/GLB_Models/0 (11).glb' },
+            { name: 'Base Model 12', path: './ASSETS/3D_Models/GLB_Models/0 (12).glb' },
+            { name: 'Base Model 13', path: './ASSETS/3D_Models/GLB_Models/0 (13).glb' },
+            { name: 'Base Model 14', path: './ASSETS/3D_Models/GLB_Models/0 (14).glb' },
+            { name: 'Base Model 15', path: './ASSETS/3D_Models/GLB_Models/0 (15).glb' },
+            { name: 'Base Model 16', path: './ASSETS/3D_Models/GLB_Models/0 (16).glb' },
+            { name: 'Base Model 17', path: './ASSETS/3D_Models/GLB_Models/0 (17).glb' },
+            { name: 'Base Model 19', path: './ASSETS/3D_Models/GLB_Models/0 (19).glb' },
+            { name: 'Base Model 20', path: './ASSETS/3D_Models/GLB_Models/0 (20).glb' },
+            { name: 'Base Model 21', path: './ASSETS/3D_Models/GLB_Models/0 (21).glb' },
+            { name: 'Base Model 22', path: './ASSETS/3D_Models/GLB_Models/0 (22).glb' },
+            { name: 'Base Model 23', path: './ASSETS/3D_Models/GLB_Models/0 (23).glb' },
+            { name: 'Base Model 24', path: './ASSETS/3D_Models/GLB_Models/0 (24).glb' },
+            { name: 'Base Model 25', path: './ASSETS/3D_Models/GLB_Models/0 (25).glb' },
+            { name: 'Base Model 26', path: './ASSETS/3D_Models/GLB_Models/0 (26).glb' },
+            { name: 'Base Model 27', path: './ASSETS/3D_Models/GLB_Models/0 (27).glb' },
+            { name: 'Base Model 28', path: './ASSETS/3D_Models/GLB_Models/0 (28).glb' },
+            { name: 'Base Model 29', path: './ASSETS/3D_Models/GLB_Models/0 (29).glb' },
+            { name: 'Base Model 30', path: './ASSETS/3D_Models/GLB_Models/0 (30).glb' },
+            { name: 'Base Model 31', path: './ASSETS/3D_Models/GLB_Models/0 (31).glb' },
+            { name: 'Base Model 32', path: './ASSETS/3D_Models/GLB_Models/0 (32).glb' },
+            { name: 'Base Model 33', path: './ASSETS/3D_Models/GLB_Models/0 (33).glb' },
+            { name: 'Base Model 34', path: './ASSETS/3D_Models/GLB_Models/0 (34).glb' },
+            { name: 'Base Model 35', path: './ASSETS/3D_Models/GLB_Models/0 (35).glb' },
+            { name: 'Base Model 36', path: './ASSETS/3D_Models/GLB_Models/0 (36).glb' },
+
+            // Standard Models
             { name: 'Model 1', path: './ASSETS/3D_Models/GLB_Models/model.glb' },
             { name: 'Model 2', path: './ASSETS/3D_Models/GLB_Models/model (1).glb' },
             { name: 'Model 3', path: './ASSETS/3D_Models/GLB_Models/model (2).glb' },
             { name: 'Model 4', path: './ASSETS/3D_Models/GLB_Models/model (3).glb' },
             { name: 'Model 5', path: './ASSETS/3D_Models/GLB_Models/model (4).glb' },
             { name: 'Model 6', path: './ASSETS/3D_Models/GLB_Models/model (5).glb' },
+
+            // Sample Models
             { name: 'Sample 1', path: './ASSETS/3D_Models/GLB_Models/sample.glb' },
             { name: 'Sample 2', path: './ASSETS/3D_Models/GLB_Models/sample (1).glb' },
             { name: 'Sample 3', path: './ASSETS/3D_Models/GLB_Models/sample (2).glb' },
             { name: 'Sample 4', path: './ASSETS/3D_Models/GLB_Models/sample (3).glb' },
             { name: 'Sample 5', path: './ASSETS/3D_Models/GLB_Models/sample (4).glb' },
             { name: 'Sample 6', path: './ASSETS/3D_Models/GLB_Models/sample (5).glb' },
-            { name: 'White Mesh', path: './ASSETS/3D_Models/GLB_Models/white_mesh.glb' },
-            { name: 'Base Model', path: './ASSETS/3D_Models/GLB_Models/0.glb' }
+
+            // Numbered Models (Spanish)
+            { name: 'Número Uno', path: './ASSETS/3D_Models/GLB_Models/number `1.glb' },
+            { name: 'Número Dos', path: './ASSETS/3D_Models/GLB_Models/number dos.glb' },
+            { name: 'Número Tres', path: './ASSETS/3D_Models/GLB_Models/number tres.glb' },
+            { name: 'Número Cuatro', path: './ASSETS/3D_Models/GLB_Models/number quatro.glb' },
+            { name: 'Número Cinco', path: './ASSETS/3D_Models/GLB_Models/number cincio.glb' },
+            { name: 'Número Seis', path: './ASSETS/3D_Models/GLB_Models/number seys.glb' },
+            { name: 'Número Siete', path: './ASSETS/3D_Models/GLB_Models/number sevenalelflef.glb' },
+            { name: 'Número Ocho', path: './ASSETS/3D_Models/GLB_Models/numero ocho.glb' },
+
+            // Detail Generated Models
+            { name: 'Detail Gen 1', path: './ASSETS/3D_Models/GLB_Models/detailgen3d_eotuj6xd.glb' },
+            { name: 'Detail Gen 2', path: './ASSETS/3D_Models/GLB_Models/detailgen3d_s0jahzf5.glb' },
+
+            // UUID Models
+            { name: 'UUID Model 1', path: './ASSETS/3D_Models/GLB_Models/5029ad7b-75b9-46f3-be5c-ae3a214f9e73.glb' },
+            { name: 'UUID White Mesh', path: './ASSETS/3D_Models/GLB_Models/cf2a1f36-a3d3-4a68-8656-ca5ab3b9c919_white_mesh.glb' },
+
+            // Temporary Models
+            { name: 'Temp Model 1', path: './ASSETS/3D_Models/GLB_Models/tmp4os222s0.glb' },
+            { name: 'Temp Model 2', path: './ASSETS/3D_Models/GLB_Models/tmpfamy0kyl.glb' },
+            { name: 'Temp Model 3', path: './ASSETS/3D_Models/GLB_Models/tmpmex6xq0f.glb' },
+            { name: 'Temp Model 4', path: './ASSETS/3D_Models/GLB_Models/tmpn3vm28wz.glb' },
+            { name: 'Temp Model 5', path: './ASSETS/3D_Models/GLB_Models/tmpn3vm28wz (1).glb' },
+            { name: 'Temp Model 6', path: './ASSETS/3D_Models/GLB_Models/tmpppuu47gt.glb' }
         ];
 
         let currentModelIndex = 0;
@@ -766,26 +838,63 @@
 
             // Model selector
             const modelSelector = document.createElement('div');
-            modelSelector.className = 'flex items-center gap-4 mb-4';
+            modelSelector.className = 'flex flex-col gap-3 mb-4';
+
+            // Top row with navigation and dropdown
+            const navRow = document.createElement('div');
+            navRow.className = 'flex items-center gap-4';
 
             const prevBtn = document.createElement('button');
             prevBtn.innerHTML = '◀';
             prevBtn.className = 'px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors';
             prevBtn.addEventListener('click', previousModel);
 
+            const modelInfo = document.createElement('div');
+            modelInfo.className = 'flex-1 text-center';
+
             const modelName = document.createElement('div');
             modelName.id = 'current-model-name';
-            modelName.className = 'text-cyan-200 font-bold flex-1 text-center';
+            modelName.className = 'text-cyan-200 font-bold';
             modelName.textContent = carModels[currentModelIndex].name;
+
+            const modelCount = document.createElement('div');
+            modelCount.id = 'model-count';
+            modelCount.className = 'text-cyan-400 text-sm';
+            modelCount.textContent = `${currentModelIndex + 1} of ${carModels.length} models`;
+
+            modelInfo.appendChild(modelName);
+            modelInfo.appendChild(modelCount);
 
             const nextBtn = document.createElement('button');
             nextBtn.innerHTML = '▶';
             nextBtn.className = 'px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors';
             nextBtn.addEventListener('click', nextModel);
 
-            modelSelector.appendChild(prevBtn);
-            modelSelector.appendChild(modelName);
-            modelSelector.appendChild(nextBtn);
+            // Model dropdown for quick selection
+            const modelDropdown = document.createElement('select');
+            modelDropdown.id = 'model-dropdown';
+            modelDropdown.className = 'w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded text-cyan-200 text-sm';
+
+            carModels.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${index + 1}. ${model.name}`;
+                if (index === currentModelIndex) option.selected = true;
+                modelDropdown.appendChild(option);
+            });
+
+            modelDropdown.addEventListener('change', (e) => {
+                currentModelIndex = parseInt(e.target.value);
+                updateModelDisplay();
+                loadModel(carModels[currentModelIndex].path);
+            });
+
+            navRow.appendChild(prevBtn);
+            navRow.appendChild(modelInfo);
+            navRow.appendChild(nextBtn);
+
+            modelSelector.appendChild(navRow);
+            modelSelector.appendChild(modelDropdown);
 
             // 3D Canvas
             const canvas3D = document.createElement('canvas');
@@ -1107,7 +1216,8 @@
                         });
                     }
                     modal.remove();
-                    renderApp();
+                    // Redirect to main menu after successful login
+                    window.location.href = 'D:\\GAME_PROJECT_ORGANIZED\\index.html';
                 } catch (error) {
                     errorMsg.textContent = error.message;
                     errorMsg.classList.remove('hidden');
@@ -1346,7 +1456,14 @@
         }
 
         function updateModelDisplay() {
-            document.getElementById('current-model-name').textContent = carModels[currentModelIndex].name;
+            const modelNameEl = document.getElementById('current-model-name');
+            const modelCountEl = document.getElementById('model-count');
+            const modelDropdownEl = document.getElementById('model-dropdown');
+
+            if (modelNameEl) modelNameEl.textContent = carModels[currentModelIndex].name;
+            if (modelCountEl) modelCountEl.textContent = `${currentModelIndex + 1} of ${carModels.length} models`;
+            if (modelDropdownEl) modelDropdownEl.value = currentModelIndex;
+
             loadModel(carModels[currentModelIndex].path);
         }
 

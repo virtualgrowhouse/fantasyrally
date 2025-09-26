@@ -1,0 +1,33 @@
+<div>
+  GAME PROJECT ORGANIZED - FOLDER PURPOSE
+  =====================================
+  This folder was created to house the Racing Hub Game project and its associated documentation.
+  PURPOSE:
+  --------
+  - Centralized location for all racing game development files
+  - Documentation and guides for module development
+  - HTML front-end interface for the bubble-based racing hub
+  - Asset management and project organization
+  CONTENTS CREATED:
+  -----------------
+  1. index.html - Main game interface with updated bubble modules
+  2. GAME_OVERVIEW.txt - Comprehensive game concept and feature documentation
+  3. MODULE_ADDITION_GUIDE.txt - Step-by-step instructions for adding new modules
+  4. FOLDER_PURPOSE.txt - This file explaining the folder's creation and purpose
+  MAIN MODULES IMPLEMENTED:
+  ------------------------
+  - Market (with Used car sub-modules including Auction &amp; Marketplace)
+  - Race (Quick Race, Championship, Online, Time Trial, Drift)
+  - Career (Story Mode, Challenges, Progress)
+  - Events (Special, Community, Leaderboards)
+  - Options (Graphics, Audio, Controls, Gameplay)
+  - Tune (Engine, Suspension, Tires, ECU)
+  - Garage (Paint, Edit Parts, Parts, All Cars, Inspect)
+  - Social (My Profile, Search, Friends, Recent)
+  - Workshop (Custom Parts, Livery Editor, Share Designs)
+  The interface now includes 9 main bubble modules with comprehensive sub-modules,
+  properly spaced around the central car display hub.
+  This documentation ensures we remember why this structure was created and
+  how to maintain and expand the racing game system without getting confused
+  or backtracked during development.
+</div>
