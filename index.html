@@ -82,8 +82,8 @@
         const currentCarImage = 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=800&auto=format&fit=crop';
         const backgroundImage = 'https://images.unsplash.com/photo-1614294103233-6c827c17b830?q=80&w=1200&auto=format&fit=crop';
 
-        // API Configuration
-        const API_BASE_URL = 'http://localhost:3000/api';
+        // API Configuration - Demo Mode
+        const API_BASE_URL = null; // Demo mode - no backend needed
 
         // --- AUTHENTICATION FUNCTIONS ---
         const authAPI = {
@@ -795,6 +795,13 @@
                     activeSubBubbleId = null;
                     renderApp();
                 });
+
+                // Also add click handler to make sub-bubbles persistent
+                bubble.addEventListener('click', () => {
+                    activeBubbleId = data.id;
+                    activeSubBubbleId = null;
+                    renderApp();
+                });
                 hubContainer.appendChild(bubble);
             });
 
@@ -804,7 +811,7 @@
                     const subBubble = createSubBubble(subData, activeBubbleData);
                     subBubble.addEventListener('mouseenter', () => {
                          activeSubBubbleId = subData.id;
-                         renderApp();
+                         // Don't re-render on hover to prevent disruption
                     });
                     hubContainer.appendChild(subBubble);
                 });
@@ -1017,7 +1024,14 @@
             // Add single click handler for all sub-bubbles
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
+                console.log(`Sub-bubble clicked: ${data.id} in ${parent.id}`);
                 triggerClickGlow(el);
+
+                // Visual feedback - flash the bubble
+                el.style.backgroundColor = 'rgba(0, 255, 255, 0.9)';
+                setTimeout(() => {
+                    el.style.backgroundColor = url ? 'rgba(59, 89, 152, 0.8)' : 'rgba(20, 50, 70, 0.8)';
+                }, 200);
 
                 // Handle URL bubbles (like Facebook group)
                 if (url) {
@@ -2024,6 +2038,37 @@
                 };
             }
         }
+        // Demo Mode Fix - Override fetch calls for authentication
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (url && url.includes('/auth/')) {
+                // Demo authentication responses
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        const demoUser = {
+                            id: 12345,
+                            username: 'demo_user',
+                            email: 'demo@example.com',
+                            displayName: 'Demo User',
+                            credits: 2500,
+                            level: 5,
+                            carsOwned: 8,
+                            achievementsUnlocked: 12
+                        };
+
+                        resolve({
+                            ok: true,
+                            json: () => Promise.resolve({
+                                token: 'demo-token-' + Date.now(),
+                                user: demoUser
+                            })
+                        });
+                    }, 500);
+                });
+            }
+            return originalFetch.apply(this, arguments);
+        };
+
     </script>
 </body>
 </html>
