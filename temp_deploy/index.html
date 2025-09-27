@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Racing Hub UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.02); opacity: 0.2; }
+        }
+        @keyframes pulse-slower {
+            0%, 100% { transform: scale(1); opacity: 0.05; }
+            50% { transform: scale(1.01); opacity: 0.1; }
+        }
+        .animate-pulse-slow { animation: pulse-slow 8s infinite ease-in-out; }
+        .animate-pulse-slower { animation: pulse-slower 12s infinite ease-in-out; }
+        @keyframes scroll-left {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+        }
+        .animate-scroll-left { animation: scroll-left 15s linear infinite; }
+        .modal-backdrop { backdrop-filter: blur(10px); }
+        #viewer3d { display: none; }
+        @keyframes click-glow {
+            0% { box-shadow: 0 0 5px rgba(255, 255, 0, 0.3), 0 0 10px rgba(255, 255, 0, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(255, 255, 0, 0.8), 0 0 40px rgba(255, 255, 0, 0.6), 0 0 60px rgba(255, 255, 0, 0.4); }
+            100% { box-shadow: 0 0 5px rgba(255, 255, 0, 0.3), 0 0 10px rgba(255, 255, 0, 0.2); }
+        }
+        .click-glow { animation: click-glow 0.3s ease-out; }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes flash {
+          0% { background-color: rgba(255,255,255,0.8); box-shadow: 0 0 10px rgba(255,255,255,0.8); }
+          50% { background-color: rgba(255,255,255,0.3); box-shadow: 0 0 5px rgba(255,255,255,0.3); }
+          100% { background-color: rgba(255,255,255,0.8); box-shadow: 0 0 10px rgba(255,255,255,0.8); }
+        }
+        .bubble {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background-color: rgba(100,100,100,0.6);
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8px;
+          color: transparent;
+          user-select: none;
+        }
+        .bubble.active {
+          animation: flash 0.5s infinite;
+          background-color: rgba(255,255,255,0.8);
+          color: #000;
+        }
+        .bubble:hover {
+          transform: scale(1.2);
+          background-color: rgba(150,150,150,0.8);
+        }
+    </style>
+</head>
+<body class="bg-[#0a1423] m-0 p-0 overflow-hidden">
+    <div id="app-root"></div>
+    <script>
+        // --- STATE MANAGEMENT ---
+        let activeBubbleId = null;
+        let activeSubBubbleId = null;
+        let currentUser = null;
+        let authToken = localStorage.getItem('authToken');
+        const currentCarImage = 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=800&auto=format&fit=crop';
+        const backgroundImage = 'https://images.unsplash.com/photo-1614294103233-6c827c17b830?q=80&w=1200&auto=format&fit=crop';
+
+        // API Configuration - Demo Mode
+        const API_BASE_URL = null; // Demo mode - no backend needed
+
+        // --- AUTHENTICATION FUNCTIONS ---
+        const authAPI = {
+            async register(userData) {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    return data;
+                } else {
+                    throw new Error(data.error || 'Registration failed');
+                }
+            },
+
+            async login(credentials) {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(credentials)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    return data;
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
+            },
+
+            async logout() {
+                if (authToken) {
+                    await fetch(`${API_BASE_URL}/auth/logout`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                }
+                authToken = null;
+                currentUser = null;
+                localStorage.removeItem('authToken');
+            },
+
+            async getProfile() {
+                const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    currentUser = data.user;
+                    return data.user;
+                } else {
+                    throw new Error(data.error || 'Failed to fetch profile');
+                }
+            },
+
+            isAuthenticated() {
+                return authToken !== null && currentUser !== null;
+            }
+        };
+
+        // Initialize authentication on page load
+        async function initializeAuth() {
+            if (authToken) {
+                try {
+                    await authAPI.getProfile();
+                } catch (error) {
+                    console.warn('Failed to verify token, logging out:', error);
+                    await authAPI.logout();
+                }
+            }
+        }
+
+        // --- DATA ---
+        const bubblesData = [
+            {
+                id: 'market',
+                label: 'Market',
+                icon: '🛒',
+                angle: 30,
+                distance: 200,
+                submodules: [
+                    {
+                        id: 'used',
+                        label: 'Used',
+                        icon: '🛠️',
+                        angle: 0,
+                        distance: 90,
+                        submodules: [
+                            { id: 'auction', label: 'Auction', icon: '⚖️', angle: -45, distance: 70 },
+                            { id: 'marketplace', label: 'Marketplace', icon: '🏪', angle: 45, distance: 70 }
+                        ]
+                    },
+                    { id: 'new-cars', label: 'New Cars', icon: '✨', angle: 120, distance: 90 },
+                    { id: 'dealership', label: 'Dealership', icon: '🏢', angle: 240, distance: 90 }
+                ]
+            },
+
+            {
+                id: 'race',
+                label: 'Race',
+                icon: '🏁',
+                angle: 66,
+                distance: 200,
+                submodules: [
+                    { id: 'race-quick', label: 'Quick Race', icon: '🏎️', angle: 0, distance: 90 },
+                    { id: 'race-champ', label: 'Championship', icon: '🏆', angle: 72, distance: 90 },
+                    { id: 'race-online', label: 'Online', icon: '🌐', angle: 144, distance: 90 },
+                    { id: 'race-time', label: 'Time Trial', icon: '⏱️', angle: 216, distance: 90 },
+                    { id: 'race-drift', label: 'Drift', icon: '🌀', angle: 288, distance: 90 }
+                ]
+            },
+
+            {
+                id: 'career',
+                label: 'Career',
+                icon: '🏆',
+                angle: 102,
+                distance: 200,
+                submodules: [
+                    { id: 'career-story', label: 'Story Mode', icon: '📖', angle: 0, distance: 90 },
+                    { id: 'career-challenges', label: 'Challenges', icon: '🎯', angle: 120, distance: 90 },
+                    { id: 'career-progress', label: 'Progress', icon: '📊', angle: 240, distance: 90 }
+                ]
+            },
+
+            {
+                id: 'events',
+                label: 'Events',
+                icon: '🎉',
+                angle: 138,
+                distance: 200,
+                submodules: [
+                    { id: 'events-special', label: 'Special', icon: '✨', angle: 0, distance: 90 },
+                    { id: 'events-community', label: 'Community', icon: '👥', angle: 120, distance: 90 },
+                    { id: 'events-boards', label: 'Leaderboards', icon: '🥇', angle: 240, distance: 90 }
+                ]
+            },
+
+            {
+                id: 'options',
+                label: 'Options',
+                icon: '⚙️',
+                angle: 174,
+                distance: 200,
+                submodules: [
+                    { id: 'options-graphics', label: 'Graphics', icon: '🖥️', angle: 0, distance: 90 },
+                    { id: 'options-audio', label: 'Audio', icon: '🔊', angle: 90, distance: 90 },
+                    { id: 'options-controls', label: 'Controls', icon: '🎮', angle: 180, distance: 90 },
+                    { id: 'options-gameplay', label: 'Gameplay', icon: '🎲', angle: 270, distance: 90 }
+                ]
+            },
+
+            {
+                id: 'tune',
+                label: 'Tune',
+                icon: '🛠️',
+                angle: 210,
+                distance: 200,
+                submodules: [
+                    { id: 'tune-engine', label: 'Engine', icon: '⚙️', angle: 0, distance: 90 },
+                    { id: 'tune-suspension', label: 'Suspension', icon: '🔩', angle: 90, distance: 90 },
+                    { id: 'tune-tires', label: 'Tires', icon: '⚫', angle: 180, distance: 90 },
+                    { id: 'tune-ecu', label: 'ECU', icon: '💻', angle: 270, distance: 90 }
+                ]
+            },
+
+            {
+                id: 'garage',
+                label: 'Garage',
+                icon: '🚗',
+                angle: 246,
+                distance: 200,
+                submodules: [
+                    { id: 'paint', label: 'Paint', icon: '🎨', angle: 0, distance: 90 },
+                    { id: 'edit-parts', label: 'Edit Parts', icon: '🔧', angle: 60, distance: 90 },
+                    { id: 'parts', label: 'Parts', icon: '🔩', angle: 120, distance: 90 },
+                    { id: '3d-viewer', label: '3D Viewer', icon: '📦', angle: 180, distance: 90 },
+                    { id: 'view-all', label: 'All Cars', icon: '🏎️', angle: 240, distance: 90 },
+                    { id: 'view-specific', label: 'Inspect', icon: '🔍', angle: 300, distance: 90 }
+                ]
+            },
+            {
+                id: 'social',
+                label: 'Social',
+                icon: '🌐',
+                angle: 282,
+                distance: 200,
+                submodules: [
+                    { id: 'profile', label: 'My Profile', icon: '👤', angle: 0, distance: 90 },
+                    { id: 'search', label: 'Search', icon: '🔍', angle: 72, distance: 90 },
+                    { id: 'friends', label: 'Friends', icon: '👥', angle: 144, distance: 90 },
+                    { id: 'facebook-group', label: 'AI Auto Art', icon: '📘', angle: 216, distance: 90, url: 'https://www.facebook.com/groups/aiautomotiveart' },
+                    { id: 'recent', label: 'Recent', icon: '🕒', angle: 288, distance: 90 }
+                ]
+            },
+            {
+                id: 'workshop',
+                label: 'Workshop',
+                icon: '🔨',
+                angle: 318,
+                distance: 200,
+                submodules: [
+                    { id: 'workshop-custom', label: 'Custom Parts', icon: '⚡', angle: 0, distance: 90 },
+                    { id: 'workshop-livery', label: 'Livery Editor', icon: '🎨', angle: 120, distance: 90 },
+                    { id: 'workshop-share', label: 'Share Designs', icon: '📤', angle: 240, distance: 90 }
+                ]
+            },
+            {
+                id: 'perchance',
+                label: 'Perchance',
+                icon: '🎲',
+                angle: 354,
+                distance: 200,
+                submodules: [
+                    { id: 'carspecsrandomizer', label: 'Car Specs', icon: '🎯', angle: 0, distance: 90, url: 'https://perchance.org/carspecsrandomizer' }
+                ]
+            },
+            {
+                id: 'ai-generator',
+                label: 'AI Gen',
+                icon: '🎨',
+                angle: 0,
+                distance: 200,
+                submodules: [
+                    { id: 'interior-design', label: 'Interior', icon: '🏠', angle: 0, distance: 90 },
+                    { id: 'architecture', label: 'Architecture', icon: '🏢', angle: 120, distance: 90 },
+                    { id: 'car-design', label: 'Car Design', icon: '🚗', angle: 240, distance: 90 }
+                ]
+            }
+        ];
+
+        const futureModuleNames = [
+            'Rims', 'Fenders', 'Arenas', 'Spoilers', 'Color Maker', 'Taxi Mode', '1v1 Racing', '2v2 Racing',
+            'Tag Team', 'King of Hill', 'Domination', 'Search & Destroy', 'Free For All', 'Neon Cars',
+            'Comics', 'Paint Booth', 'Tool Maker', 'Exhaust', 'Bumpers', 'Hoods', 'Mirrors', 'Seats',
+            'Steering Wheels', 'Dashboards', 'Roll Cages', 'Nitrous', 'Turbo', 'Supercharger', 'ECU Tune',
+            'Dyno Testing', 'Track Builder', 'Weather System', 'Day/Night', 'Photo Mode', 'Replay System',
+            'Ghost Racing', 'Drift Zones', 'Speed Traps', 'Jump Challenges', 'Stunt Mode', 'Drag Strip',
+            'Circuit Racing', 'Rally Mode', 'Off-Road', 'Street Racing', 'Highway Racing', 'Airport',
+            'Mountain Pass', 'City Circuit', 'Desert Track', 'Snow Track', 'Rain Racing', 'Fog Racing',
+            'Night Racing', 'Sunrise Racing', 'Sunset Racing', 'License Tests', 'Driving School', 'Tutorials',
+            'Achievements', 'Trophies', 'Badges', 'Rankings', 'Statistics', 'Lap Records', 'Best Times',
+            'Personal Bests', 'Global Records', 'Friend Records', 'Club Racing', 'Team Racing', 'Tournaments',
+            'Championships', 'Seasons', 'Weekly Events', 'Daily Challenges', 'Special Events', 'Holiday Events',
+            'Car Shows', 'Meet Ups', 'Photo Contests', 'Design Contests', 'Speed Contests', 'Drift Contests',
+            'Auction House', 'Trade Center', 'Marketplace', 'Car Dealer', 'Used Cars', 'Classic Cars',
+            'Supercars', 'Hypercars', 'Electric Cars', 'Hybrid Cars', 'Muscle Cars', 'JDM Cars', 'Euro Cars',
+            'American Cars', 'German Cars', 'Italian Cars', 'Japanese Cars', 'British Cars', 'French Cars',
+            'Swedish Cars', 'Korean Cars', 'Concept Cars', 'Prototypes', 'Race Cars', 'Street Cars',
+            'Vintage Cars', 'Modern Cars', 'Luxury Cars', 'Sports Cars', 'Coupes', 'Sedans', 'Hatchbacks',
+            'Convertibles', 'SUVs', 'Trucks', 'Motorcycles', 'ATVs', 'Boats', 'Planes', 'Helicopters',
+            'Damage System', 'Wear & Tear', 'Maintenance', 'Repairs', 'Upgrades', 'Tuning', 'Dyno Charts',
+            'Performance', 'Handling', 'Acceleration', 'Top Speed', 'Braking', 'Cornering', 'Stability',
+            'Traction', 'Grip', 'Downforce', 'Weight', 'Balance', 'Suspension', 'Alignment', 'Camber',
+            'Toe', 'Caster', 'Springs', 'Dampers', 'Anti-Roll', 'Differential', 'Gearing', 'Final Drive'
+        ];
+
+        const lockedBubblesData = Array.from({ length: 150 }).map((_, i) => {
+            const angle = (i * 2.4); // 150 bubbles spread over 360 degrees
+            const distance = 350 + (i % 5) * 20 + Math.random() * 15; // Varying distances
+            const nameIndex = i % futureModuleNames.length;
+            return {
+                id: `locked-${i}`,
+                angle: angle,
+                distance: distance,
+                name: futureModuleNames[nameIndex]
+            };
+        });
+
+        const updateMessages = [
+            'John completed a 1v1 race and earned 500 credits',
+            'Sarah unlocked the Drift Master achievement',
+            'Mike purchased a new Lamborghini Huracan',
+            'Emma customized her car with neon underglow',
+            'Alex won the weekly tournament championship',
+            'Lisa shared a new livery design',
+            'Tom set a new lap record on Tokyo Circuit',
+            'Kate joined the AI Automotive Art group',
+            'Ryan upgraded his engine to Stage 3',
+            'Zoe completed the Career Mode storyline'
+        ];
+
+        let currentMessageIndex = 0;
+
+        // 3D Models List - All GLB models from your project (89 models total)
+        const carModels = [
+            // Featured/Named Models
+            { name: 'Fantasy Rally', path: './ASSETS/3D_Models/GLB_Models/Fantasy_Rally_Showdow_0714171004_texture.glb' },
+            { name: 'High Octane Drag Racer', path: './ASSETS/3D_Models/GLB_Models/High_Octane_Drag_Rac_0204054716_texture.glb' },
+            { name: 'Orange Racer', path: './ASSETS/3D_Models/GLB_Models/Orange_Racer_on_the_R_0714171017_texture.glb' },
+            { name: 'Racecar Stanced', path: './ASSETS/3D_Models/GLB_Models/Racecar_stanced_car__0204061642_texture.glb' },
+            { name: 'Red Elegance', path: './ASSETS/3D_Models/GLB_Models/Red_Elegance_on_the_B_0603082717_texture.glb' },
+            { name: 'Speed Aesthetic', path: './ASSETS/3D_Models/GLB_Models/Speed_Aesthetic_0714170948_texture.glb' },
+            { name: 'Modern Serenity', path: './ASSETS/3D_Models/GLB_Models/Modern_Serenity_0714171027_texture.glb' },
+            { name: '4 Bedroom Luxury', path: './ASSETS/3D_Models/GLB_Models/4_bedroom_3bath_luxur_0714181403_texture.glb' },
+            { name: 'White Mesh', path: './ASSETS/3D_Models/GLB_Models/white_mesh.glb' },
+            { name: 'Object Model', path: './ASSETS/3D_Models/GLB_Models/object.glb' },
+            { name: 'Partpacker', path: './ASSETS/3D_Models/GLB_Models/partpacker_20250617_225653.glb' },
+
+            // Base Models
+            { name: 'Base Model', path: './ASSETS/3D_Models/GLB_Models/0.glb' },
+            { name: 'Base Model 1', path: './ASSETS/3D_Models/GLB_Models/0 (1).glb' },
+            { name: 'Base Model 2', path: './ASSETS/3D_Models/GLB_Models/0 (2).glb' },
+            { name: 'Base Model 3', path: './ASSETS/3D_Models/GLB_Models/0 (3).glb' },
+            { name: 'Base Model 4', path: './ASSETS/3D_Models/GLB_Models/0 (4).glb' },
+            { name: 'Base Model 5', path: './ASSETS/3D_Models/GLB_Models/0 (5).glb' },
+            { name: 'Base Model 6', path: './ASSETS/3D_Models/GLB_Models/0 (6).glb' },
+            { name: 'Base Model 7', path: './ASSETS/3D_Models/GLB_Models/0 (7).glb' },
+            { name: 'Base Model 8', path: './ASSETS/3D_Models/GLB_Models/0 (8).glb' },
+            { name: 'Base Model 9', path: './ASSETS/3D_Models/GLB_Models/0 (9).glb' },
+            { name: 'Base Model 10', path: './ASSETS/3D_Models/GLB_Models/0 (10).glb' },
+            { name: 'Base Model 11', path: './ASSETS/3D_Models/GLB_Models/0 (11).glb' },
+            { name: 'Base Model 12', path: './ASSETS/3D_Models/GLB_Models/0 (12).glb' },
+            { name: 'Base Model 13', path: './ASSETS/3D_Models/GLB_Models/0 (13).glb' },
+            { name: 'Base Model 14', path: './ASSETS/3D_Models/GLB_Models/0 (14).glb' },
+            { name: 'Base Model 15', path: './ASSETS/3D_Models/GLB_Models/0 (15).glb' },
+            { name: 'Base Model 16', path: './ASSETS/3D_Models/GLB_Models/0 (16).glb' },
+            { name: 'Base Model 17', path: './ASSETS/3D_Models/GLB_Models/0 (17).glb' },
+            { name: 'Base Model 19', path: './ASSETS/3D_Models/GLB_Models/0 (19).glb' },
+            { name: 'Base Model 20', path: './ASSETS/3D_Models/GLB_Models/0 (20).glb' },
+            { name: 'Base Model 21', path: './ASSETS/3D_Models/GLB_Models/0 (21).glb' },
+            { name: 'Base Model 22', path: './ASSETS/3D_Models/GLB_Models/0 (22).glb' },
+            { name: 'Base Model 23', path: './ASSETS/3D_Models/GLB_Models/0 (23).glb' },
+            { name: 'Base Model 24', path: './ASSETS/3D_Models/GLB_Models/0 (24).glb' },
+            { name: 'Base Model 25', path: './ASSETS/3D_Models/GLB_Models/0 (25).glb' },
+            { name: 'Base Model 26', path: './ASSETS/3D_Models/GLB_Models/0 (26).glb' },
+            { name: 'Base Model 27', path: './ASSETS/3D_Models/GLB_Models/0 (27).glb' },
+            { name: 'Base Model 28', path: './ASSETS/3D_Models/GLB_Models/0 (28).glb' },
+            { name: 'Base Model 29', path: './ASSETS/3D_Models/GLB_Models/0 (29).glb' },
+            { name: 'Base Model 30', path: './ASSETS/3D_Models/GLB_Models/0 (30).glb' },
+            { name: 'Base Model 31', path: './ASSETS/3D_Models/GLB_Models/0 (31).glb' },
+            { name: 'Base Model 32', path: './ASSETS/3D_Models/GLB_Models/0 (32).glb' },
+            { name: 'Base Model 33', path: './ASSETS/3D_Models/GLB_Models/0 (33).glb' },
+            { name: 'Base Model 34', path: './ASSETS/3D_Models/GLB_Models/0 (34).glb' },
+            { name: 'Base Model 35', path: './ASSETS/3D_Models/GLB_Models/0 (35).glb' },
+            { name: 'Base Model 36', path: './ASSETS/3D_Models/GLB_Models/0 (36).glb' },
+
+            // Standard Models
+            { name: 'Model 1', path: './ASSETS/3D_Models/GLB_Models/model.glb' },
+            { name: 'Model 2', path: './ASSETS/3D_Models/GLB_Models/model (1).glb' },
+            { name: 'Model 3', path: './ASSETS/3D_Models/GLB_Models/model (2).glb' },
+            { name: 'Model 4', path: './ASSETS/3D_Models/GLB_Models/model (3).glb' },
+            { name: 'Model 5', path: './ASSETS/3D_Models/GLB_Models/model (4).glb' },
+            { name: 'Model 6', path: './ASSETS/3D_Models/GLB_Models/model (5).glb' },
+
+            // Sample Models
+            { name: 'Sample 1', path: './ASSETS/3D_Models/GLB_Models/sample.glb' },
+            { name: 'Sample 2', path: './ASSETS/3D_Models/GLB_Models/sample (1).glb' },
+            { name: 'Sample 3', path: './ASSETS/3D_Models/GLB_Models/sample (2).glb' },
+            { name: 'Sample 4', path: './ASSETS/3D_Models/GLB_Models/sample (3).glb' },
+            { name: 'Sample 5', path: './ASSETS/3D_Models/GLB_Models/sample (4).glb' },
+            { name: 'Sample 6', path: './ASSETS/3D_Models/GLB_Models/sample (5).glb' },
+
+            // Numbered Models (Spanish)
+            { name: 'Número Uno', path: './ASSETS/3D_Models/GLB_Models/number `1.glb' },
+            { name: 'Número Dos', path: './ASSETS/3D_Models/GLB_Models/number dos.glb' },
+            { name: 'Número Tres', path: './ASSETS/3D_Models/GLB_Models/number tres.glb' },
+            { name: 'Número Cuatro', path: './ASSETS/3D_Models/GLB_Models/number quatro.glb' },
+            { name: 'Número Cinco', path: './ASSETS/3D_Models/GLB_Models/number cincio.glb' },
+            { name: 'Número Seis', path: './ASSETS/3D_Models/GLB_Models/number seys.glb' },
+            { name: 'Número Siete', path: './ASSETS/3D_Models/GLB_Models/number sevenalelflef.glb' },
+            { name: 'Número Ocho', path: './ASSETS/3D_Models/GLB_Models/numero ocho.glb' },
+
+            // Detail Generated Models
+            { name: 'Detail Gen 1', path: './ASSETS/3D_Models/GLB_Models/detailgen3d_eotuj6xd.glb' },
+            { name: 'Detail Gen 2', path: './ASSETS/3D_Models/GLB_Models/detailgen3d_s0jahzf5.glb' },
+
+            // UUID Models
+            { name: 'UUID Model 1', path: './ASSETS/3D_Models/GLB_Models/5029ad7b-75b9-46f3-be5c-ae3a214f9e73.glb' },
+            { name: 'UUID White Mesh', path: './ASSETS/3D_Models/GLB_Models/cf2a1f36-a3d3-4a68-8656-ca5ab3b9c919_white_mesh.glb' },
+
+            // Temporary Models
+            { name: 'Temp Model 1', path: './ASSETS/3D_Models/GLB_Models/tmp4os222s0.glb' },
+            { name: 'Temp Model 2', path: './ASSETS/3D_Models/GLB_Models/tmpfamy0kyl.glb' },
+            { name: 'Temp Model 3', path: './ASSETS/3D_Models/GLB_Models/tmpmex6xq0f.glb' },
+            { name: 'Temp Model 4', path: './ASSETS/3D_Models/GLB_Models/tmpn3vm28wz.glb' },
+            { name: 'Temp Model 5', path: './ASSETS/3D_Models/GLB_Models/tmpn3vm28wz (1).glb' },
+            { name: 'Temp Model 6', path: './ASSETS/3D_Models/GLB_Models/tmpppuu47gt.glb' }
+        ];
+
+        let currentModelIndex = 0;
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+
+        // --- RENDER FUNCTION ---
+        function renderApp() {
+            const root = document.getElementById('app-root');
+            root.innerHTML = '';
+
+            const mainContainer = document.createElement('div');
+            mainContainer.className = "w-screen h-screen bg-cover bg-center";
+            mainContainer.style.backgroundImage = `url('${backgroundImage}')`;
+
+            // Create header
+            const header = document.createElement('div');
+            header.className = "absolute top-0 left-0 w-full h-12 bg-[#0a1423]/90 backdrop-blur-md border-b border-cyan-400/20 flex items-center justify-between px-6 z-50";
+
+            // Time display
+            const timeDisplay = document.createElement('div');
+            timeDisplay.className = "text-cyan-200 text-sm font-bold";
+            const now = new Date();
+            timeDisplay.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+            header.appendChild(timeDisplay);
+
+            // Profile section
+            const profileSection = document.createElement('div');
+            profileSection.className = "flex items-center gap-4";
+
+            const profileContainer = document.createElement('div');
+            profileContainer.className = "relative";
+
+            const profilePic = document.createElement('div');
+            profilePic.className = "w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-cyan-400/50";
+
+            // Show user initial or login prompt
+            if (authAPI.isAuthenticated() && currentUser) {
+                const initial = currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : currentUser.username.charAt(0).toUpperCase();
+                profilePic.innerHTML = `<span class="text-white text-xs font-bold">${initial}</span>`;
+            } else {
+                profilePic.innerHTML = '<span class="text-white text-xs font-bold">?</span>';
+            }
+
+            // Create dropdown menu
+            const profileMenu = document.createElement('div');
+            profileMenu.className = "absolute top-full right-0 mt-2 w-32 bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-lg shadow-lg shadow-cyan-400/20 opacity-0 pointer-events-none transition-all duration-300 z-50";
+
+            const menuItems = authAPI.isAuthenticated() ? [
+                { label: 'Home', icon: '🏠' },
+                { label: 'My Car', icon: '🏎️', url: 'my-car.html' },
+                { label: 'Profile', icon: '👤', action: 'showProfile' },
+                { label: 'Logout', icon: '🚪', action: 'logout' }
+            ] : [
+                { label: 'Login', icon: '🔑', action: 'login' },
+                { label: 'Register', icon: '📝', action: 'register' }
+            ];
+
+            menuItems.forEach((item, index) => {
+                const menuItem = document.createElement('div');
+                menuItem.className = "flex items-center gap-2 px-3 py-2 text-cyan-200 text-xs cursor-pointer hover:bg-cyan-400/10 hover:text-cyan-100 transition-colors duration-200";
+                if (index === 0) menuItem.className += " rounded-t-lg";
+                if (index === menuItems.length - 1) menuItem.className += " rounded-b-lg";
+
+                menuItem.innerHTML = `<span>${item.icon}</span><span>${item.label}</span>`;
+
+                menuItem.addEventListener('click', async () => {
+                    profileMenu.style.opacity = '0';
+                    profileMenu.style.pointerEvents = 'none';
+
+                    if (item.url) {
+                        window.location.href = item.url;
+                    } else if (item.action) {
+                        switch (item.action) {
+                            case 'login':
+                                showAuthModal('login');
+                                break;
+                            case 'register':
+                                showAuthModal('register');
+                                break;
+                            case 'logout':
+                                await authAPI.logout();
+                                renderApp();
+                                break;
+                            case 'showProfile':
+                                showUserProfile();
+                                break;
+                            default:
+                                console.log(`${item.label} functionality coming soon`);
+                        }
+                    } else {
+                        console.log(`${item.label} functionality coming soon`);
+                    }
+                });
+
+                profileMenu.appendChild(menuItem);
+            });
+
+            // Click event to show menu in main window
+            profilePic.addEventListener('click', () => {
+                showProfileMenu();
+            });
+
+            profileContainer.appendChild(profilePic);
+            profileContainer.appendChild(profileMenu);
+
+            const friendsOnline = document.createElement('div');
+            friendsOnline.className = "text-cyan-200 text-xs";
+
+            if (authAPI.isAuthenticated() && currentUser) {
+                friendsOnline.innerHTML = `💰 <span class="font-bold">${currentUser.credits}</span> credits | 🏆 Level ${currentUser.level}`;
+            } else {
+                friendsOnline.innerHTML = `
+                    <div class="flex gap-2 items-center">
+                        <button id="headerLoginBtn" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs px-3 py-1 rounded transition-all duration-200">Login</button>
+                        <button id="headerSignupBtn" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition-all duration-200">Sign Up</button>
+                    </div>
+                `;
+
+                // Add event listeners for header auth buttons
+                setTimeout(() => {
+                    const headerLoginBtn = document.getElementById('headerLoginBtn');
+                    const headerSignupBtn = document.getElementById('headerSignupBtn');
+
+                    if (headerLoginBtn) {
+                        headerLoginBtn.addEventListener('click', () => showAuthModal('login'));
+                    }
+                    if (headerSignupBtn) {
+                        headerSignupBtn.addEventListener('click', () => showAuthModal('register'));
+                    }
+                }, 100);
+            }
+
+            profileSection.appendChild(profileContainer);
+            profileSection.appendChild(friendsOnline);
+            header.appendChild(profileSection);
+
+            // Scrolling updates section
+            const updatesContainer = document.createElement('div');
+            updatesContainer.className = "flex-1 mx-6 overflow-hidden relative h-full";
+
+            const updatesText = document.createElement('div');
+            updatesText.className = "absolute top-1/2 transform -translate-y-1/2 text-cyan-300/80 text-xs whitespace-nowrap animate-scroll-left";
+            updatesText.textContent = updateMessages[currentMessageIndex % updateMessages.length];
+
+            updatesContainer.appendChild(updatesText);
+            header.appendChild(updatesContainer);
+
+            mainContainer.appendChild(header);
+
+            // AI Image Generator Section
+            const aiGeneratorSection = document.createElement('div');
+            aiGeneratorSection.id = 'ai-generator-section';
+            aiGeneratorSection.style.display = 'none';
+            aiGeneratorSection.innerHTML = `
+                <div style="font-family:Arial,sans-serif; max-width:1200px; margin:0 auto; padding:20px; background:#1a1a1a; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+                  <!-- Header -->
+                  <header style="text-align:center; margin-bottom:40px;">
+                    <h1 style="color:#f0f0f0; font-size:2.8rem; margin-bottom:10px;">Ultimate AI Image Generator</h1>
+                    <p style="color:#b0b0b0; font-size:1.2rem;">Create stunning HD interior designs and architectural visualizations</p>
+                    <button id="backToHubBtn" style="background:#444; color:#f0f0f0; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; margin-top:15px;">← Back to Racing Hub</button>
+                  </header>
+
+                  <!-- Bubble Circle Section -->
+                  <section style="position:relative; width:100%; height:600px; margin-bottom:30px; background:#2d2d2d; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:300px; height:300px; border-radius:50%; overflow:hidden; box-shadow:0 0 30px rgba(0,0,0,0.5);">
+                      <img id="centeredImageEl" src="https://placehold.co/300x300" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div id="bubblesCtn" style="position:absolute; top:0; left:0; width:100%; height:100%;"></div>
+                    <button id="resetBubblesBtn" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#444; color:#f0f0f0; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; transition:all 0.3s;">Reset All Bubbles</button>
+                  </section>
+
+                  <!-- Interior Design Section -->
+                  <section style="background:#2d2d2d; padding:30px; border-radius:10px; margin-bottom:30px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <h2 style="color:#f0f0f0; font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center;">
+                      <span style="background:#3498db; color:white; padding:5px 12px; border-radius:20px; margin-right:10px;">01</span>
+                      Interior Design Generator
+                    </h2>
+
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:300px;">
+                        <textarea id="interiorPromptInput"
+                          placeholder="Describe your interior design: 'Modern minimalist living room with floor-to-ceiling windows, neutral color palette, and Scandinavian furniture'"
+                          style="width:100%; height:120px; padding:15px; border:2px solid #444; border-radius:8px; font-size:1rem; resize:vertical; background:#1a1a1a; color:#f0f0f0; transition:border-color 0.3s;"></textarea>
+
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                          <button id="interiorGenerateBtn"
+                            style="flex:1; background:#3498db; color:white; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 6px rgba(52, 152, 219, 0.3);">
+                            Generate HD Image
+                          </button>
+                          <button id="interiorRandomBtn"
+                            style="background:#444; color:#f0f0f0; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s;">
+                            Random Idea
+                          </button>
+                        </div>
+
+                        <div id="interiorLoadingEl" hidden style="margin-top:20px; text-align:center; color:#3498db;">
+                          <div style="display:inline-block; width:20px; height:20px; border:2px solid #3498db; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div>
+                          <span style="margin-left:10px;">Creating your masterpiece...</span>
+                        </div>
+                      </div>
+
+                      <div style="flex:1; min-width:300px; text-align:center;">
+                        <div id="interiorPlaceholderEl" style="background:#1a1a1a; border:2px dashed #444; border-radius:8px; height:300px; display:flex; align-items:center; justify-content:center; color:#b0b0b0;">
+                          Your generated interior design will appear here
+                        </div>
+                        <img id="interiorOutputImg" hidden style="max-width:100%; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                      </div>
+                    </div>
+                  </section>
+
+                  <!-- Architecture Section -->
+                  <section style="background:#2d2d2d; padding:30px; border-radius:10px; margin-bottom:30px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <h2 style="color:#f0f0f0; font-size:1.8rem; margin-bottom:20px; display:flex; align-items:center;">
+                      <span style="background:#e74c3c; color:white; padding:5px 12px; border-radius:20px; margin-right:10px;">02</span>
+                      Architecture Generator
+                    </h2>
+
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:300px;">
+                        <textarea id="archPromptInput"
+                          placeholder="Describe your architectural concept: 'Futuristic sustainable skyscraper with vertical gardens, solar panels, and curved glass facade'"
+                          style="width:100%; height:120px; padding:15px; border:2px solid #444; border-radius:8px; font-size:1rem; resize:vertical; background:#1a1a1a; color:#f0f0f0; transition:border-color 0.3s;"></textarea>
+
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                          <button id="archGenerateBtn"
+                            style="flex:1; background:#e74c3c; color:white; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 6px rgba(231, 76, 60, 0.3);">
+                            Generate HD Image
+                          </button>
+                          <button id="archRandomBtn"
+                            style="background:#444; color:#f0f0f0; border:none; padding:12px 20px; border-radius:8px; font-size:1rem; cursor:pointer; transition:all 0.3s;">
+                            Random Idea
+                          </button>
+                        </div>
+
+                        <div id="archLoadingEl" hidden style="margin-top:20px; text-align:center; color:#e74c3c;">
+                          <div style="display:inline-block; width:20px; height:20px; border:2px solid #e74c3c; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div>
+                          <span style="margin-left:10px;">Designing your structure...</span>
+                        </div>
+                      </div>
+
+                      <div style="flex:1; min-width:300px; text-align:center;">
+                        <div id="archPlaceholderEl" style="background:#1a1a1a; border:2px dashed #444; border-radius:8px; height:300px; display:flex; align-items:center; justify-content:center; color:#b0b0b0;">
+                          Your architectural visualization will appear here
+                        </div>
+                        <img id="archOutputImg" hidden style="max-width:100%; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                      </div>
+                    </div>
+                  </section>
+
+                  <!-- Features Section -->
+                  <section style="background:#2d2d2d; color:#f0f0f0; padding:30px; border-radius:10px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+                    <h2 style="font-size:1.8rem; margin-bottom:20px;">Why Choose Our AI Generator?</h2>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:20px; margin-top:30px;">
+                      <div style="padding:20px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        <h3 style="font-size:1.3rem; margin-bottom:10px;">HD Output</h3>
+                        <p>Generate high-resolution images perfect for presentations and print</p>
+                      </div>
+                      <div style="padding:20px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        <h3 style="font-size:1.3rem; margin-bottom:10px;">Specialized Models</h3>
+                        <p>Trained specifically for interior design and architectural visualization</p>
+                      </div>
+                      <div style="padding:20px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        <h3 style="font-size:1.3rem; margin-bottom:10px;">Fast Generation</h3>
+                        <p>Create stunning visuals in seconds, not hours</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <!-- Footer -->
+                  <footer style="text-align:center; margin-top:40px; color:#b0b0b0; font-size:0.9rem;">
+                    <p>© 2023 Ultimate AI Image Generator | All rights reserved</p>
+                  </footer>
+                </div>
+            `;
+            mainContainer.appendChild(aiGeneratorSection);
+
+            const overlay = document.createElement('div');
+            overlay.id = 'racing-hub-overlay';
+            overlay.className = "w-full h-full bg-[#0a1423]/80 backdrop-blur-sm flex items-center justify-center overflow-hidden pt-12";
+            mainContainer.appendChild(overlay);
+
+            const hubContainer = document.createElement('div');
+            hubContainer.className = "relative w-[800px] h-[800px] flex items-center justify-center";
+            hubContainer.addEventListener('mouseleave', () => {
+                activeBubbleId = null;
+                activeSubBubbleId = null;
+                renderApp();
+            });
+            overlay.appendChild(hubContainer);
+
+            const centralHub = document.createElement('div');
+            centralHub.className = "w-80 h-80 bg-[#101a2c] rounded-full shadow-2xl shadow-cyan-500/10 border-2 border-cyan-400/20 bg-cover bg-center relative overflow-hidden";
+            centralHub.style.backgroundImage = `url(${currentCarImage})`;
+
+            const carOverlay = document.createElement('div');
+            carOverlay.className = "absolute inset-0 bg-gradient-to-t from-[#101a2c]/80 via-transparent to-transparent flex items-end justify-center pb-4";
+            carOverlay.innerHTML = '<div class="text-cyan-200 text-sm font-bold">Current Car</div>';
+            centralHub.appendChild(carOverlay);
+
+            hubContainer.appendChild(centralHub);
+
+            const ring1 = document.createElement('div');
+            ring1.className = "absolute w-[550px] h-[550px] border-2 border-cyan-400/10 rounded-full animate-pulse-slow";
+            hubContainer.appendChild(ring1);
+
+            const ring2 = document.createElement('div');
+            ring2.className = "absolute w-[700px] h-[700px] border border-cyan-400/5 rounded-full animate-pulse-slower";
+            hubContainer.appendChild(ring2);
+
+            bubblesData.forEach(data => {
+                const isActive = activeBubbleId === data.id;
+                const bubble = createBubble(data, isActive);
+                bubble.addEventListener('mouseenter', () => {
+                    activeBubbleId = data.id;
+                    activeSubBubbleId = null;
+                    renderApp();
+                });
+
+                // Also add click handler to make sub-bubbles persistent
+                bubble.addEventListener('click', () => {
+                    activeBubbleId = data.id;
+                    activeSubBubbleId = null;
+                    renderApp();
+                });
+                hubContainer.appendChild(bubble);
+            });
+
+            const activeBubbleData = bubblesData.find(b => b.id === activeBubbleId);
+            if (activeBubbleData && activeBubbleData.submodules) {
+                activeBubbleData.submodules.forEach(subData => {
+                    const subBubble = createSubBubble(subData, activeBubbleData);
+                    subBubble.addEventListener('mouseenter', () => {
+                         activeSubBubbleId = subData.id;
+                         // Don't re-render on hover to prevent disruption
+                    });
+                    hubContainer.appendChild(subBubble);
+                });
+            }
+
+            const activeSubBubbleData = activeBubbleData?.submodules?.find(sb => sb.id === activeSubBubbleId);
+             if (activeSubBubbleData && activeSubBubbleData.submodules) {
+                activeSubBubbleData.submodules.forEach(subSubData => {
+                    const subSubBubble = createSubSubBubble(subSubData, activeSubBubbleData, activeBubbleData);
+                    hubContainer.appendChild(subSubBubble);
+                });
+            }
+
+            lockedBubblesData.forEach(data => {
+                hubContainer.appendChild(createLockedBubble(data));
+            });
+
+            // Create 3D Viewer Modal
+            const viewer3DModal = document.createElement('div');
+            viewer3DModal.id = 'viewer3d';
+            viewer3DModal.className = 'fixed inset-0 bg-black/80 modal-backdrop z-[100] flex items-center justify-center';
+
+            const viewerContainer = document.createElement('div');
+            viewerContainer.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-6 w-[90vw] h-[80vh] relative';
+
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.className = 'absolute top-4 right-4 text-cyan-200 hover:text-white text-2xl z-10';
+            closeBtn.addEventListener('click', close3DViewer);
+
+            // Model selector
+            const modelSelector = document.createElement('div');
+            modelSelector.className = 'flex flex-col gap-3 mb-4';
+
+            // Top row with navigation and dropdown
+            const navRow = document.createElement('div');
+            navRow.className = 'flex items-center gap-4';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.innerHTML = '◀';
+            prevBtn.className = 'px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors';
+            prevBtn.addEventListener('click', previousModel);
+
+            const modelInfo = document.createElement('div');
+            modelInfo.className = 'flex-1 text-center';
+
+            const modelName = document.createElement('div');
+            modelName.id = 'current-model-name';
+            modelName.className = 'text-cyan-200 font-bold';
+            modelName.textContent = carModels[currentModelIndex].name;
+
+            const modelCount = document.createElement('div');
+            modelCount.id = 'model-count';
+            modelCount.className = 'text-cyan-400 text-sm';
+            modelCount.textContent = `${currentModelIndex + 1} of ${carModels.length} models`;
+
+            modelInfo.appendChild(modelName);
+            modelInfo.appendChild(modelCount);
+
+            const nextBtn = document.createElement('button');
+            nextBtn.innerHTML = '▶';
+            nextBtn.className = 'px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors';
+            nextBtn.addEventListener('click', nextModel);
+
+            // Model dropdown for quick selection
+            const modelDropdown = document.createElement('select');
+            modelDropdown.id = 'model-dropdown';
+            modelDropdown.className = 'w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded text-cyan-200 text-sm';
+
+            carModels.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${index + 1}. ${model.name}`;
+                if (index === currentModelIndex) option.selected = true;
+                modelDropdown.appendChild(option);
+            });
+
+            modelDropdown.addEventListener('change', (e) => {
+                currentModelIndex = parseInt(e.target.value);
+                updateModelDisplay();
+                loadModel(carModels[currentModelIndex].path);
+            });
+
+            navRow.appendChild(prevBtn);
+            navRow.appendChild(modelInfo);
+            navRow.appendChild(nextBtn);
+
+            modelSelector.appendChild(navRow);
+            modelSelector.appendChild(modelDropdown);
+
+            // 3D Canvas
+            const canvas3D = document.createElement('canvas');
+            canvas3D.id = 'canvas3d';
+            canvas3D.className = 'w-full h-full rounded-lg';
+
+            viewerContainer.appendChild(closeBtn);
+            viewerContainer.appendChild(modelSelector);
+            viewerContainer.appendChild(canvas3D);
+            viewer3DModal.appendChild(viewerContainer);
+
+            // Create Profile Menu Modal
+            const profileMenuModal = document.createElement('div');
+            profileMenuModal.id = 'profile-menu-modal';
+            profileMenuModal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center hidden';
+
+            const profileMenuContainer = document.createElement('div');
+            profileMenuContainer.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-8 w-[400px] relative';
+
+            // Close button
+            const closeProfileBtn = document.createElement('button');
+            closeProfileBtn.innerHTML = '✕';
+            closeProfileBtn.className = 'absolute top-4 right-4 text-cyan-200 hover:text-white text-xl';
+            closeProfileBtn.addEventListener('click', hideProfileMenu);
+
+            // Profile header
+            const profileHeader = document.createElement('div');
+            profileHeader.className = 'text-center mb-6';
+            profileHeader.innerHTML = `
+                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl font-bold">P</span>
+                </div>
+                <h3 class="text-cyan-200 text-xl font-bold">Player Profile</h3>
+                <p class="text-gray-400 text-sm">Choose your destination</p>
+            `;
+
+            // Menu items
+            const profileMenuItems = document.createElement('div');
+            profileMenuItems.className = 'space-y-3';
+
+            const menuOptions = [
+                { label: 'Home', icon: '🏠', description: 'Return to main hub' },
+                { label: 'My Car', icon: '🏎️', url: 'my-car.html', description: 'View your car\'s live history' },
+                { label: 'Garage', icon: '🚗', description: 'Customize your vehicles' },
+                { label: 'World', icon: '🌍', description: 'Open world driving mode' }
+            ];
+
+            menuOptions.forEach(option => {
+                const menuButton = document.createElement('button');
+                menuButton.className = 'w-full flex items-center gap-4 p-4 bg-[#1a2332] hover:bg-cyan-400/10 rounded-lg border border-transparent hover:border-cyan-400/30 transition-all duration-200 text-left';
+                menuButton.innerHTML = `
+                    <div class="text-3xl">${option.icon}</div>
+                    <div class="flex-1">
+                        <div class="text-cyan-200 font-semibold">${option.label}</div>
+                        <div class="text-gray-400 text-sm">${option.description}</div>
+                    </div>
+                    <div class="text-cyan-400">→</div>
+                `;
+
+                menuButton.addEventListener('click', () => {
+                    if (option.url) {
+                        window.location.href = option.url;
+                    } else {
+                        console.log(`${option.label} functionality coming soon`);
+                        hideProfileMenu();
+                    }
+                });
+
+                profileMenuItems.appendChild(menuButton);
+            });
+
+            profileMenuContainer.appendChild(closeProfileBtn);
+            profileMenuContainer.appendChild(profileHeader);
+            profileMenuContainer.appendChild(profileMenuItems);
+            profileMenuModal.appendChild(profileMenuContainer);
+
+            root.appendChild(mainContainer);
+            root.appendChild(viewer3DModal);
+            root.appendChild(profileMenuModal);
+        }
+
+        function createBubble(data, isActive) {
+            const { icon, label, angle, distance } = data;
+            const radians = angle * (Math.PI / 180);
+            const x = distance * Math.cos(radians);
+            const y = distance * Math.sin(radians);
+
+            const el = document.createElement('div');
+            el.className = `absolute flex flex-col items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-all duration-700 ease-out transform hover:scale-110`;
+            el.style.transform = `translate(${x}px, ${y}px) ${isActive ? 'scale(1.15)' : 'scale(1)'}`;
+            el.style.backgroundColor = isActive ? 'rgba(0, 255, 255, 0.2)' : 'rgba(16, 40, 60, 0.7)';
+            el.style.border = `2px solid ${isActive ? 'rgba(255, 255, 0, 1)' : 'rgba(0, 255, 255, 0.3)'}`;
+            el.style.boxShadow = isActive ? '0 0 30px rgba(255, 255, 0, 0.8), 0 0 60px rgba(255, 255, 0, 0.4)' : 'none';
+            el.innerHTML = `<span class="text-lg">${icon}</span><span class="text-[8px] text-cyan-200">${label}</span>`;
+
+            // Add click glow effect
+            el.addEventListener('click', (e) => {
+                triggerClickGlow(el);
+            });
+
+            return el;
+        }
+
+        function createSubBubble(data, parent) {
+            const { icon, label, angle, distance, url } = data;
+            const parentRadians = parent.angle * (Math.PI / 180);
+            const parentX = parent.distance * Math.cos(parentRadians);
+            const parentY = parent.distance * Math.sin(parentRadians);
+            const radians = angle * (Math.PI / 180);
+            const x = parentX + distance * Math.cos(radians);
+            const y = parentY + distance * Math.sin(radians);
+
+            const el = document.createElement('div');
+            el.className = `absolute flex flex-col items-center justify-center w-16 h-16 rounded-full cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-110`;
+            el.style.transform = `translate(${x}px, ${y}px)`;
+            el.style.backgroundColor = url ? 'rgba(59, 89, 152, 0.8)' : 'rgba(20, 50, 70, 0.8)';
+            el.style.border = url ? '1px solid rgba(59, 89, 152, 0.8)' : '1px solid rgba(0, 255, 255, 0.4)';
+            el.innerHTML = `<span class="text-2xl">${icon}</span><span class="text-[10px] text-cyan-100 text-center leading-tight">${label}</span>`;
+
+            // Add single click handler for all sub-bubbles
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log(`Sub-bubble clicked: ${data.id} in ${parent.id}`);
+                triggerClickGlow(el);
+
+                // Visual feedback - flash the bubble
+                el.style.backgroundColor = 'rgba(0, 255, 255, 0.9)';
+                setTimeout(() => {
+                    el.style.backgroundColor = url ? 'rgba(59, 89, 152, 0.8)' : 'rgba(20, 50, 70, 0.8)';
+                }, 200);
+
+                // Handle URL bubbles (like Facebook group)
+                if (url) {
+                    window.open(url, '_blank');
+                } else {
+                    // Handle regular sub-bubble functions
+                    handleSubBubbleClick(data.id, parent.id);
+                }
+            });
+
+            // Special styling
+            if (url) {
+                el.style.boxShadow = '0 0 10px rgba(59, 89, 152, 0.3)';
+            } else if (data.id === '3d-viewer') {
+                el.style.boxShadow = '0 0 10px rgba(255, 255, 0, 0.3)';
+            }
+
+            return el;
+        }
+
+        function createSubSubBubble(data, parent, grandparent) {
+             const { icon, label, angle, distance } = data;
+             const gpRadians = grandparent.angle * (Math.PI / 180);
+             const gpX = grandparent.distance * Math.cos(gpRadians);
+             const gpY = grandparent.distance * Math.sin(gpRadians);
+             const pRadians = parent.angle * (Math.PI / 180);
+             const pX = gpX + parent.distance * Math.cos(pRadians);
+             const pY = gpY + parent.distance * Math.sin(pRadians);
+             const radians = angle * (Math.PI / 180);
+             const x = pX + distance * Math.cos(radians);
+             const y = pY + distance * Math.sin(radians);
+             const el = document.createElement('div');
+             el.className = `absolute flex flex-col items-center justify-center w-14 h-14 rounded-full cursor-pointer transition-all duration-200 ease-in-out transform hover:scale-110`;
+             el.style.transform = `translate(${x}px, ${y}px)`;
+             el.style.backgroundColor = 'rgba(30, 60, 80, 0.9)';
+             el.style.border = `1px solid rgba(0, 255, 255, 0.3)`;
+             el.innerHTML = `<span class="text-xl">${icon}</span><span class="text-[9px] text-cyan-200 text-center leading-tight">${label}</span>`;
+
+             // Add click glow effect and functionality for sub-sub-bubbles
+             el.addEventListener('click', (e) => {
+                 e.stopPropagation();
+                 triggerClickGlow(el);
+                 handleSubSubBubbleClick(data.id, parent.id, grandparent.id);
+             });
+
+             return el;
+        }
+
+        function createLockedBubble(data) {
+            const { angle, distance, name } = data;
+            const radians = angle * (Math.PI / 180);
+            const x = distance * Math.cos(radians);
+            const y = distance * Math.sin(radians);
+
+            const el = document.createElement('div');
+            el.className = `absolute flex items-center justify-center w-6 h-6 rounded-full bg-gray-800/70 border border-gray-600/60 cursor-pointer transition-all duration-200 hover:scale-125 hover:bg-gray-700/80 hover:border-gray-500`;
+            el.style.transform = `translate(${x}px, ${y}px)`;
+            el.innerHTML = `<span class="text-gray-400 text-xs">🔒</span>`;
+
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = `absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/90 text-cyan-200 text-xs rounded border border-cyan-400/30 whitespace-nowrap opacity-0 pointer-events-none transition-opacity duration-200 z-50`;
+            tooltip.textContent = `${name} (Locked)`;
+            el.appendChild(tooltip);
+
+            // Hover events
+            el.addEventListener('mouseenter', () => {
+                tooltip.style.opacity = '1';
+            });
+            el.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+
+            // Add click glow effect for locked bubbles
+            el.addEventListener('click', (e) => {
+                triggerClickGlow(el);
+                // Could add "Coming Soon" message or unlock animation here
+            });
+
+            return el;
+        }
+
+        // Authentication modal functions
+        function showAuthModal(mode = 'login') {
+            // Remove existing auth modal if any
+            const existingModal = document.getElementById('auth-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'auth-modal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-8 max-w-md w-full mx-4 relative';
+
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.className = 'absolute top-4 right-4 text-cyan-200 hover:text-white text-xl';
+            closeBtn.addEventListener('click', () => modal.remove());
+
+            // Title
+            const title = document.createElement('h2');
+            title.className = 'text-cyan-200 text-2xl font-bold text-center mb-6';
+            title.textContent = mode === 'login' ? 'Welcome Back' : 'Join Fantasy Rally';
+
+            // Form
+            const form = document.createElement('form');
+            form.className = 'space-y-4';
+
+            // Username field
+            const usernameField = document.createElement('div');
+            usernameField.innerHTML = `
+                <label class="block text-cyan-200 text-sm font-medium mb-2">Username${mode === 'login' ? ' or Email' : ''}</label>
+                <input type="text" id="username" name="username" required
+                       class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                       placeholder="${mode === 'login' ? 'Username or Email' : 'Choose a username'}">
+            `;
+
+            // Email field (only for register)
+            let emailField = null;
+            if (mode === 'register') {
+                emailField = document.createElement('div');
+                emailField.innerHTML = `
+                    <label class="block text-cyan-200 text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="email" name="email" required
+                           class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                           placeholder="your@email.com">
+                `;
+            }
+
+            // Display name field (only for register)
+            let displayNameField = null;
+            if (mode === 'register') {
+                displayNameField = document.createElement('div');
+                displayNameField.innerHTML = `
+                    <label class="block text-cyan-200 text-sm font-medium mb-2">Display Name (Optional)</label>
+                    <input type="text" id="displayName" name="displayName"
+                           class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                           placeholder="How others will see you">
+                `;
+            }
+
+            // Password field
+            const passwordField = document.createElement('div');
+            passwordField.innerHTML = `
+                <label class="block text-cyan-200 text-sm font-medium mb-2">Password</label>
+                <input type="password" id="password" name="password" required
+                       class="w-full px-3 py-2 bg-[#1a2332] border border-cyan-400/30 rounded-lg text-cyan-100 placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                       placeholder="Enter your password">
+            `;
+
+            // Error message
+            const errorMsg = document.createElement('div');
+            errorMsg.id = 'auth-error';
+            errorMsg.className = 'hidden bg-red-500/20 border border-red-500/30 text-red-200 p-3 rounded-lg text-sm';
+
+            // Submit button
+            const submitBtn = document.createElement('button');
+            submitBtn.type = 'submit';
+            submitBtn.className = 'w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02]';
+            submitBtn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+
+            // Toggle link
+            const toggleLink = document.createElement('p');
+            toggleLink.className = 'text-center text-gray-400 text-sm mt-4';
+            toggleLink.innerHTML = mode === 'login'
+                ? `Don't have an account? <a href="#" class="text-cyan-400 hover:text-cyan-300">Sign up</a>`
+                : `Already have an account? <a href="#" class="text-cyan-400 hover:text-cyan-300">Sign in</a>`;
+
+            // Toggle functionality
+            toggleLink.querySelector('a').addEventListener('click', (e) => {
+                e.preventDefault();
+                modal.remove();
+                showAuthModal(mode === 'login' ? 'register' : 'login');
+            });
+
+            // Form submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                submitBtn.disabled = true;
+                submitBtn.textContent = mode === 'login' ? 'Signing In...' : 'Creating Account...';
+
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+
+                try {
+                    if (mode === 'login') {
+                        await authAPI.login({ username: data.username, password: data.password });
+                    } else {
+                        await authAPI.register({
+                            username: data.username,
+                            email: data.email,
+                            password: data.password,
+                            displayName: data.displayName || data.username
+                        });
+                    }
+                    modal.remove();
+                    // Redirect to main menu after successful login
+                    window.location.href = 'D:\\GAME_PROJECT_ORGANIZED\\index.html';
+                } catch (error) {
+                    errorMsg.textContent = error.message;
+                    errorMsg.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+                }
+            });
+
+            // Assemble form
+            form.appendChild(usernameField);
+            if (emailField) form.appendChild(emailField);
+            if (displayNameField) form.appendChild(displayNameField);
+            form.appendChild(passwordField);
+            form.appendChild(errorMsg);
+            form.appendChild(submitBtn);
+
+            modalContent.appendChild(closeBtn);
+            modalContent.appendChild(title);
+            modalContent.appendChild(form);
+            modalContent.appendChild(toggleLink);
+            modal.appendChild(modalContent);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        // User profile modal
+        function showUserProfile() {
+            if (!authAPI.isAuthenticated() || !currentUser) {
+                showAuthModal('login');
+                return;
+            }
+
+            // Remove existing profile modal if any
+            const existingModal = document.getElementById('profile-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'profile-modal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-8 max-w-lg w-full mx-4 relative';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.className = 'absolute top-4 right-4 text-cyan-200 hover:text-white text-xl';
+            closeBtn.addEventListener('click', () => modal.remove());
+
+            modalContent.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-white text-3xl font-bold">${currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : currentUser.username.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <h2 class="text-cyan-200 text-2xl font-bold">${currentUser.displayName || currentUser.username}</h2>
+                    <p class="text-gray-400">@${currentUser.username}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-cyan-400">${currentUser.credits}</div>
+                        <div class="text-sm text-gray-400">Credits</div>
+                    </div>
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-yellow-400">${currentUser.level}</div>
+                        <div class="text-sm text-gray-400">Level</div>
+                    </div>
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-green-400">${currentUser.carsOwned || 0}</div>
+                        <div class="text-sm text-gray-400">Cars</div>
+                    </div>
+                    <div class="bg-[#1a2332] rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-purple-400">${currentUser.achievementsUnlocked || 0}</div>
+                        <div class="text-sm text-gray-400">Achievements</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button class="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors" onclick="alert('Profile editing coming soon!')">
+                        Edit Profile
+                    </button>
+                    <button class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors" onclick="document.getElementById('profile-modal').remove(); authAPI.logout(); renderApp();">
+                        Logout
+                    </button>
+                </div>
+            `;
+
+            modalContent.insertBefore(closeBtn, modalContent.firstChild);
+            modal.appendChild(modalContent);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeAuth();
+            renderApp();
+
+            // Update time every second
+            setInterval(() => {
+                const timeElement = document.querySelector('.text-cyan-200.text-sm.font-bold');
+                if (timeElement) {
+                    const now = new Date();
+                    timeElement.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+                }
+            }, 1000);
+
+            // Cycle through update messages every 15 seconds (matches animation duration)
+            setInterval(() => {
+                currentMessageIndex++;
+                const updatesElement = document.querySelector('.animate-scroll-left');
+                if (updatesElement) {
+                    updatesElement.textContent = updateMessages[currentMessageIndex % updateMessages.length];
+                }
+            }, 15000);
+        });
+
+        // 3D Viewer Functions
+        function open3DViewer() {
+            console.log('Opening 3D viewer...');
+            const modal = document.getElementById('viewer3d');
+            if (!modal) {
+                console.error('3D viewer modal not found');
+                return;
+            }
+            modal.style.display = 'flex';
+
+            // Check if Three.js is loaded
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js not loaded');
+                alert('3D viewer libraries not loaded. Please refresh the page.');
+                return;
+            }
+
+            init3DViewer();
+            loadModel(carModels[currentModelIndex].path);
+        }
+
+        function close3DViewer() {
+            const modal = document.getElementById('viewer3d');
+            modal.style.display = 'none';
+            if (renderer) {
+                renderer.dispose();
+            }
+        }
+
+        function init3DViewer() {
+            const canvas = document.getElementById('canvas3d');
+            const container = canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a1423);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, rect.width / rect.height, 0.1, 1000);
+            camera.position.set(0, 2, 5);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(rect.width - 50, rect.height - 100);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Start render loop
+            animate();
+        }
+
+        function loadModel(modelPath) {
+            if (currentModel) {
+                scene.remove(currentModel);
+            }
+
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                modelPath,
+                function(gltf) {
+                    currentModel = gltf.scene;
+
+                    // Center and scale the model
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+
+                    const maxAxis = Math.max(size.x, size.y, size.z);
+                    currentModel.scale.setScalar(2 / maxAxis);
+                    currentModel.position.copy(center).multiplyScalar(-1);
+
+                    scene.add(currentModel);
+                },
+                function(progress) {
+                    console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+                },
+                function(error) {
+                    console.error('Error loading model:', error);
+                    // Try alternative path structure
+                    const altPath = modelPath.replace('./ASSETS/', './ACTIVE_PROJECTS/Car_Viewer_Simple/models/');
+                    if (altPath !== modelPath) {
+                        loadModel(altPath.replace('GLB_Models/', ''));
+                    }
+                }
+            );
+        }
+
+        function previousModel() {
+            currentModelIndex = (currentModelIndex - 1 + carModels.length) % carModels.length;
+            updateModelDisplay();
+        }
+
+        function nextModel() {
+            currentModelIndex = (currentModelIndex + 1) % carModels.length;
+            updateModelDisplay();
+        }
+
+        function updateModelDisplay() {
+            const modelNameEl = document.getElementById('current-model-name');
+            const modelCountEl = document.getElementById('model-count');
+            const modelDropdownEl = document.getElementById('model-dropdown');
+
+            if (modelNameEl) modelNameEl.textContent = carModels[currentModelIndex].name;
+            if (modelCountEl) modelCountEl.textContent = `${currentModelIndex + 1} of ${carModels.length} models`;
+            if (modelDropdownEl) modelDropdownEl.value = currentModelIndex;
+
+            loadModel(carModels[currentModelIndex].path);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        // Click glow effect function
+        function triggerClickGlow(element) {
+            element.classList.remove('click-glow');
+            // Force reflow to restart animation
+            void element.offsetWidth;
+            element.classList.add('click-glow');
+
+            // Remove class after animation completes
+            setTimeout(() => {
+                element.classList.remove('click-glow');
+            }, 300);
+        }
+
+        // Profile menu functions
+        function showProfileMenu() {
+            const modal = document.getElementById('profile-menu-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function hideProfileMenu() {
+            const modal = document.getElementById('profile-menu-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Sub-bubble click handler function
+        function handleSubBubbleClick(subBubbleId, parentId) {
+            console.log(`Clicked ${subBubbleId} in ${parentId}`);
+
+            switch(parentId) {
+                case 'market':
+                    handleMarketFunction(subBubbleId);
+                    break;
+                case 'race':
+                    handleRaceFunction(subBubbleId);
+                    break;
+                case 'career':
+                    handleCareerFunction(subBubbleId);
+                    break;
+                case 'events':
+                    handleEventsFunction(subBubbleId);
+                    break;
+                case 'options':
+                    handleOptionsFunction(subBubbleId);
+                    break;
+                case 'tune':
+                    handleTuneFunction(subBubbleId);
+                    break;
+                case 'garage':
+                    handleGarageFunction(subBubbleId);
+                    break;
+                case 'social':
+                    handleSocialFunction(subBubbleId);
+                    break;
+                case 'workshop':
+                    handleWorkshopFunction(subBubbleId);
+                    break;
+                case 'ai-generator':
+                    handleAIGeneratorFunction(subBubbleId);
+                    break;
+                default:
+                    console.log(`No handler for ${parentId}`);
+            }
+        }
+
+        // Market functions
+        function handleMarketFunction(subId) {
+            switch(subId) {
+                case 'used':
+                    showModal('Used Car Market', 'Browse pre-owned vehicles from other players. Filter by price, mileage, and condition.');
+                    break;
+                case 'new-cars':
+                    showModal('New Car Dealership', 'Purchase brand new vehicles from manufacturers. Latest models with full warranty.');
+                    break;
+                case 'dealership':
+                    showModal('Premium Dealership', 'Exclusive access to rare and luxury vehicles. Special financing available.');
+                    break;
+            }
+        }
+
+        // Race functions
+        function handleRaceFunction(subId) {
+            switch(subId) {
+                case 'race-quick':
+                    showModal('Quick Race', 'Jump into instant racing action. Choose your car and hit the track!',
+                        '<button class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">Start Race</button>');
+                    break;
+                case 'race-champ':
+                    showModal('Championship Mode', 'Compete in structured tournament series. Win prizes and climb rankings!');
+                    break;
+                case 'race-online':
+                    showModal('Online Racing', 'Race against players worldwide. Join lobbies or create your own room.');
+                    break;
+                case 'race-time':
+                    showModal('Time Trial', 'Test your skills against the clock. Set new personal and global records.');
+                    break;
+                case 'race-drift':
+                    showModal('Drift Mode', 'Master the art of drifting. Score points with style and precision.');
+                    break;
+            }
+        }
+
+        // Career functions
+        function handleCareerFunction(subId) {
+            switch(subId) {
+                case 'career-story':
+                    showModal('Story Mode', 'Follow your racing journey from rookie to champion. Unlock new areas and storylines.');
+                    break;
+                case 'career-challenges':
+                    showModal('Racing Challenges', 'Complete specific objectives to earn rewards and unlock special content.');
+                    break;
+                case 'career-progress':
+                    showModal('Career Progress', 'View your racing statistics, achievements, and overall progression through the career.');
+                    break;
+            }
+        }
+
+        // Events functions
+        function handleEventsFunction(subId) {
+            switch(subId) {
+                case 'events-special':
+                    showModal('Special Events', 'Limited-time events with unique rewards. Check back regularly for new challenges!');
+                    break;
+                case 'events-community':
+                    showModal('Community Events', 'Player-created and community-driven events. Join the racing community!');
+                    break;
+                case 'events-boards':
+                    showModal('Leaderboards', 'See how you rank against other players in various racing categories.');
+                    break;
+            }
+        }
+
+        // Options functions
+        function handleOptionsFunction(subId) {
+            switch(subId) {
+                case 'options-graphics':
+                    showModal('Graphics Settings', 'Adjust visual quality, resolution, and rendering options for optimal performance.');
+                    break;
+                case 'options-audio':
+                    showModal('Audio Settings', 'Configure sound effects, music volume, and audio output preferences.');
+                    break;
+                case 'options-controls':
+                    showModal('Control Settings', 'Customize keyboard, mouse, and gamepad controls to your preference.');
+                    break;
+                case 'options-gameplay':
+                    showModal('Gameplay Settings', 'Adjust difficulty, assist options, and gameplay mechanics.');
+                    break;
+            }
+        }
+
+        // Tune functions
+        function handleTuneFunction(subId) {
+            switch(subId) {
+                case 'tune-engine':
+                    showModal('Engine Tuning', 'Modify engine performance: turbo, ECU mapping, air intake, and exhaust systems.');
+                    break;
+                case 'tune-suspension':
+                    showModal('Suspension Setup', 'Adjust ride height, spring rates, dampers, and anti-roll bars for handling.');
+                    break;
+                case 'tune-tires':
+                    showModal('Tire Configuration', 'Select tire compounds and adjust pressure for different track conditions.');
+                    break;
+                case 'tune-ecu':
+                    showModal('ECU Programming', 'Fine-tune engine management systems for maximum performance and efficiency.');
+                    break;
+            }
+        }
+
+        // Garage functions
+        function handleGarageFunction(subId) {
+            switch(subId) {
+                case 'paint':
+                    showModal('Paint Shop', 'Customize your car\'s appearance with colors, patterns, and special finishes.');
+                    break;
+                case 'edit-parts':
+                    showModal('Parts Editor', 'Install and configure aftermarket parts to enhance performance and appearance.');
+                    break;
+                case 'parts':
+                    showModal('Parts Inventory', 'Browse and manage your collection of car parts and upgrade components.');
+                    break;
+                case '3d-viewer':
+                    open3DViewer();
+                    break;
+                case 'view-all':
+                    showModal('Car Collection', 'Browse all vehicles in your garage. Select different cars for racing.');
+                    break;
+                case 'view-specific':
+                    showModal('Car Inspector', 'Detailed view of your selected vehicle with stats and modification history.');
+                    break;
+            }
+        }
+
+        // Social functions
+        function handleSocialFunction(subId) {
+            switch(subId) {
+                case 'profile':
+                    showModal('My Profile', 'View and edit your racing profile, achievements, and personal statistics.');
+                    break;
+                case 'search':
+                    showModal('Player Search', 'Find other racers by username, view their profiles and racing history.');
+                    break;
+                case 'friends':
+                    showModal('Friends List', 'Manage your friends list, send challenges, and view friend activities.');
+                    break;
+                case 'recent':
+                    showModal('Recent Activity', 'See recent races, achievements, and interactions with other players.');
+                    break;
+            }
+        }
+
+        // Workshop functions
+        function handleWorkshopFunction(subId) {
+            switch(subId) {
+                case 'workshop-custom':
+                    showModal('Custom Parts', 'Create and modify custom car parts using advanced design tools.');
+                    break;
+                case 'workshop-livery':
+                    showModal('Livery Editor', 'Design custom paint schemes and decals for your vehicles.');
+                    break;
+                case 'workshop-share':
+                    showModal('Share Designs', 'Upload your creations and download designs from other players.');
+                    break;
+            }
+        }
+
+        // AI Generator functions
+        function handleAIGeneratorFunction(subId) {
+            switch(subId) {
+                case 'interior-design':
+                case 'architecture':
+                case 'car-design':
+                    showAIGenerator();
+                    break;
+            }
+        }
+
+        // Show AI Generator interface
+        function showAIGenerator() {
+            document.getElementById('racing-hub-overlay').style.display = 'none';
+            document.getElementById('ai-generator-section').style.display = 'block';
+            initializeAIGenerator();
+        }
+
+        // Hide AI Generator and return to racing hub
+        function hideAIGenerator() {
+            document.getElementById('ai-generator-section').style.display = 'none';
+            document.getElementById('racing-hub-overlay').style.display = 'flex';
+        }
+
+        // Sub-sub-bubble click handler function
+        function handleSubSubBubbleClick(subSubBubbleId, subBubbleId, parentId) {
+            console.log(`Clicked ${subSubBubbleId} in ${subBubbleId} of ${parentId}`);
+
+            // Handle Market > Used sub-modules
+            if (parentId === 'market' && subBubbleId === 'used') {
+                switch(subSubBubbleId) {
+                    case 'auction':
+                        showModal('Car Auction', 'Bid on rare and exclusive vehicles from other players. Live bidding system with real-time updates.',
+                            '<button class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">View Auctions</button>');
+                        break;
+                    case 'marketplace':
+                        showModal('Marketplace', 'Buy and sell vehicles instantly at fixed prices. Browse listings or post your own cars for sale.',
+                            '<button class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">Browse Market</button>');
+                        break;
+                }
+            }
+        }
+
+        // Modal system for sub-bubble functions
+        function showModal(title, description, extraContent = '') {
+            // Remove existing modals
+            const existingModal = document.getElementById('function-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'function-modal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[95] flex items-center justify-center';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-[#0a1423]/95 backdrop-blur-md border border-cyan-400/30 rounded-xl p-6 max-w-md w-full mx-4 relative';
+
+            modalContent.innerHTML = `
+                <button onclick="document.getElementById('function-modal').remove()"
+                        class="absolute top-4 right-4 text-cyan-200 hover:text-white text-xl">✕</button>
+                <h3 class="text-cyan-200 text-xl font-bold mb-4">${title}</h3>
+                <p class="text-gray-300 text-sm mb-6">${description}</p>
+                <div class="flex gap-3">
+                    ${extraContent}
+                    <button onclick="document.getElementById('function-modal').remove()"
+                            class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white">Close</button>
+                </div>
+            `;
+
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+
+        // AI Generator initialization and functionality
+        function initializeAIGenerator() {
+            // Add event listeners for AI Generator interface
+            const backToHubBtn = document.getElementById('backToHubBtn');
+            if (backToHubBtn) {
+                backToHubBtn.addEventListener('click', hideAIGenerator);
+            }
+
+            // Initialize word bubbles and other AI Generator functionality
+            initializeBubbles();
+            setupAIGeneratorEvents();
+        }
+
+        // Generate 1200 words for bubbles
+        const words = [
+            "modern", "minimalist", "cozy", "bright", "spacious", "elegant", "luxury", "rustic", "industrial", "scandinavian",
+            "contemporary", "traditional", "vintage", "bohemian", "eclectic", "sleek", "warm", "cool", "natural", "artistic",
+            "open", "airy", "comfortable", "stylish", "sophisticated", "chic", "urban", "rural", "coastal", "mountain",
+            "tropical", "desert", "forest", "garden", "pool", "balcony", "terrace", "patio", "deck", "courtyard",
+            "kitchen", "bedroom", "bathroom", "living", "dining", "office", "library", "studio", "garage", "basement",
+            "light", "dark", "colorful", "monochrome", "pastel", "vibrant", "muted", "earthy", "metallic", "wooden",
+            "stone", "brick", "concrete", "glass", "marble", "granite", "tile", "carpet", "hardwood", "laminate",
+            "furniture", "sofa", "chair", "table", "desk", "bed", "cabinet", "shelf", "lamp", "mirror",
+            "art", "painting", "sculpture", "photography", "textile", "curtain", "rug", "pillow", "blanket", "plant",
+            "window", "door", "ceiling", "floor", "wall", "staircase", "fireplace", "chimney", "balcony", "terrace",
+            "sustainable", "eco-friendly", "green", "energy-efficient", "solar", "recycled", "organic", "natural", "healthy", "non-toxic"
+        ];
+
+        // Bubble management
+        let activeWords = new Set();
+        let audioContext = null;
+
+        // Initialize bubbles
+        function initializeBubbles() {
+            const container = document.getElementById('bubblesCtn');
+            if (!container) return;
+
+            container.innerHTML = ''; // Clear existing bubbles
+            const centerX = container.offsetWidth / 2;
+            const centerY = container.offsetHeight / 2;
+            const maxRadius = Math.min(centerX, centerY) - 30;
+            const rings = 10;
+            const bubblesPerRing = Math.ceil(words.length / rings);
+
+            // Create bubbles
+            for (let i = 0; i < words.length; i++) {
+                const ring = Math.floor(i / bubblesPerRing);
+                const posInRing = i % bubblesPerRing;
+                const radius = (ring + 1) * (maxRadius / rings);
+                const angle = (posInRing / bubblesPerRing) * Math.PI * 2;
+
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.style.left = `${x - 10}px`;
+                bubble.style.top = `${y - 10}px`;
+                bubble.dataset.word = words[i];
+                bubble.title = words[i];
+
+                bubble.onclick = function() {
+                    toggleBubble(bubble);
+                };
+
+                container.appendChild(bubble);
+            }
+        }
+
+        // Toggle bubble state
+        function toggleBubble(bubble) {
+            const word = bubble.dataset.word;
+
+            if (bubble.classList.contains('active')) {
+                bubble.classList.remove('active');
+                activeWords.delete(word);
+            } else {
+                bubble.classList.add('active');
+                activeWords.add(word);
+            }
+
+            playBubbleSound();
+            updatePrompts();
+        }
+
+        // Play bubble sound
+        function playBubbleSound() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Update text prompts with active words
+        function updatePrompts() {
+            const wordsArray = Array.from(activeWords);
+            const wordsText = wordsArray.length > 0 ? ', ' + wordsArray.join(', ') : '';
+
+            // Update interior prompt
+            const interiorInput = document.getElementById('interiorPromptInput');
+            if (interiorInput) {
+                const interiorValue = interiorInput.value;
+                const interiorBase = interiorValue.split(', ')[0];
+                interiorInput.value = interiorBase + wordsText;
+            }
+
+            // Update architecture prompt
+            const archInput = document.getElementById('archPromptInput');
+            if (archInput) {
+                const archValue = archInput.value;
+                const archBase = archValue.split(', ')[0];
+                archInput.value = archBase + wordsText;
+            }
+        }
+
+        // Setup AI Generator event listeners
+        function setupAIGeneratorEvents() {
+            // Reset bubbles button
+            const resetBtn = document.getElementById('resetBubblesBtn');
+            if (resetBtn) {
+                resetBtn.onclick = function() {
+                    const bubbles = document.querySelectorAll('.bubble');
+                    bubbles.forEach(bubble => {
+                        bubble.classList.remove('active');
+                    });
+                    activeWords.clear();
+                    updatePrompts();
+                };
+            }
+
+            // Interior Design Generator
+            const interiorGenerateBtn = document.getElementById('interiorGenerateBtn');
+            if (interiorGenerateBtn) {
+                interiorGenerateBtn.onclick = async function() {
+                    const interiorPromptInput = document.getElementById('interiorPromptInput');
+                    if (!interiorPromptInput.value.trim()) return;
+
+                    interiorGenerateBtn.disabled = true;
+                    const interiorLoadingEl = document.getElementById('interiorLoadingEl');
+                    const interiorOutputImg = document.getElementById('interiorOutputImg');
+                    const interiorPlaceholderEl = document.getElementById('interiorPlaceholderEl');
+
+                    interiorLoadingEl.hidden = false;
+                    interiorOutputImg.hidden = true;
+                    interiorPlaceholderEl.hidden = true;
+
+                    try {
+                        // Simulate image generation (replace with actual AI service)
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const placeholderUrl = `https://picsum.photos/600/400?random=${Math.random()}`;
+                        interiorOutputImg.src = placeholderUrl;
+                        interiorOutputImg.hidden = false;
+                    } catch (error) {
+                        interiorPlaceholderEl.hidden = false;
+                        interiorPlaceholderEl.textContent = "Generation failed. Please try again.";
+                    } finally {
+                        interiorLoadingEl.hidden = true;
+                        interiorGenerateBtn.disabled = false;
+                    }
+                };
+            }
+
+            // Architecture Generator
+            const archGenerateBtn = document.getElementById('archGenerateBtn');
+            if (archGenerateBtn) {
+                archGenerateBtn.onclick = async function() {
+                    const archPromptInput = document.getElementById('archPromptInput');
+                    if (!archPromptInput.value.trim()) return;
+
+                    archGenerateBtn.disabled = true;
+                    const archLoadingEl = document.getElementById('archLoadingEl');
+                    const archOutputImg = document.getElementById('archOutputImg');
+                    const archPlaceholderEl = document.getElementById('archPlaceholderEl');
+
+                    archLoadingEl.hidden = false;
+                    archOutputImg.hidden = true;
+                    archPlaceholderEl.hidden = true;
+
+                    try {
+                        // Simulate image generation (replace with actual AI service)
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const placeholderUrl = `https://picsum.photos/600/400?random=${Math.random()}`;
+                        archOutputImg.src = placeholderUrl;
+                        archOutputImg.hidden = false;
+                    } catch (error) {
+                        archPlaceholderEl.hidden = false;
+                        archPlaceholderEl.textContent = "Generation failed. Please try again.";
+                    } finally {
+                        archLoadingEl.hidden = true;
+                        archGenerateBtn.disabled = false;
+                    }
+                };
+            }
+
+            // Random Idea Generators
+            const interiorRandomBtn = document.getElementById('interiorRandomBtn');
+            if (interiorRandomBtn) {
+                interiorRandomBtn.onclick = function() {
+                    const ideas = [
+                        "Luxury penthouse living room with panoramic city views, marble floors, and contemporary art",
+                        "Cozy rustic cabin interior with stone fireplace, wooden beams, and fur rugs",
+                        "Industrial loft kitchen with exposed brick, stainless steel appliances, and concrete countertops",
+                        "Minimalist Japanese bedroom with tatami mats, shoji screens, and zen garden view",
+                        "Art deco hotel lobby with geometric patterns, brass fixtures, and velvet furnishings"
+                    ];
+                    const interiorPromptInput = document.getElementById('interiorPromptInput');
+                    if (interiorPromptInput) {
+                        interiorPromptInput.value = ideas[Math.floor(Math.random() * ideas.length)];
+                    }
+                };
+            }
+
+            const archRandomBtn = document.getElementById('archRandomBtn');
+            if (archRandomBtn) {
+                archRandomBtn.onclick = function() {
+                    const ideas = [
+                        "Sustainable eco-village with green roofs, solar panels, and communal spaces",
+                        "Futuristic floating city with interconnected platforms and vertical gardens",
+                        "Modern museum with cantilevered structure, glass facades, and interactive exhibits",
+                        "Desert research facility with sand-colored walls, solar shading, and water conservation systems",
+                        "Mountain retreat with cantilevered decks, natural materials, and panoramic windows"
+                    ];
+                    const archPromptInput = document.getElementById('archPromptInput');
+                    if (archPromptInput) {
+                        archPromptInput.value = ideas[Math.floor(Math.random() * ideas.length)];
+                    }
+                };
+            }
+        }
+        // Demo Mode Fix - Override fetch calls for authentication
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (url && url.includes('/auth/')) {
+                // Demo authentication responses
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        const demoUser = {
+                            id: 12345,
+                            username: 'demo_user',
+                            email: 'demo@example.com',
+                            displayName: 'Demo User',
+                            credits: 2500,
+                            level: 5,
+                            carsOwned: 8,
+                            achievementsUnlocked: 12
+                        };
+
+                        resolve({
+                            ok: true,
+                            json: () => Promise.resolve({
+                                token: 'demo-token-' + Date.now(),
+                                user: demoUser
+                            })
+                        });
+                    }, 500);
+                });
+            }
+            return originalFetch.apply(this, arguments);
+        };
+
+    </script>
+</body>
+</html>
